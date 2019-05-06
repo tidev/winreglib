@@ -1,0 +1,43 @@
+{
+	"name": "winreglib",
+	"version": "0.1.0",
+	"description": "Windows Registry Utility Library",
+	"main": "./src/index",
+	"gypfile": true,
+	"author": "Axway, Inc. <npmjs@appcelerator.com>",
+	"maintainers": [
+		"Chris Barber <cbarber@axway.com>"
+	],
+	"license": "Apache-2.0",
+	"keywords": [
+		"appcelerator",
+		"windows",
+		"windows registry",
+		"winreg",
+		"microsoft"
+	],
+	"scripts": {
+		"install": "node ./bin/run.js node-gyp-build",
+		"prebuild": "prebuildify --target=node@ --napi=true --strip",
+		"rebuild": "node-gyp rebuild",
+		"test": "mocha -r chai test/**/test-*.js"
+	},
+	"dependencies": {
+		"napi-macros": "^1.8.2",
+		"node-gyp-build": "^4.1.0"
+	},
+	"devDependencies": {
+		"chai": "^4.2.0",
+		"mocha": "^6.1.4",
+		"prebuildify": "^3.0.0"
+	},
+	"homepage": "https://github.com/appcelerator/winreglib",
+	"bugs": "https://github.com/appcelerator/winreglib/issues",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/appcelerator/winreglib.git"
+	},
+	"engines": {
+		"node": ">=8.10.0"
+	}
+}
