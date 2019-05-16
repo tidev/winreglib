@@ -10,6 +10,7 @@
 						"<!(node -e \"require('napi-macros')\")"
 					],
 					'sources': [
+						'src/watchman.cpp',
 						'src/winreglib.cpp'
 					],
 					"msvs_settings": {

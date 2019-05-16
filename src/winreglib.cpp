@@ -1,137 +1,81 @@
-#define NAPI_VERSION 3
-
-#include <map>
-#include <napi-macros.h>
-#include <node_api.h>
-#include <string>
+#include "winreglib.h"
+#include "watchman.h"
 #include <windows.h>
 
-#define TRIM_EXTRA_LINES(str) \
-	{ \
-		char* nl = strchr(str, '\r'); \
-		if (nl != NULL) { \
-			*nl = '\0'; \
-		} \
+namespace winreglib {
+	winreglib::Watchman* watchman = NULL;
+
+	const std::map<std::wstring, HKEY> rootKeys = {
+		{ L"HKEY_CLASSES_ROOT",                HKEY_CLASSES_ROOT },
+		{ L"HKEY_CURRENT_CONFIG",              HKEY_CURRENT_CONFIG },
+		{ L"HKEY_CURRENT_USER",                HKEY_CURRENT_USER },
+		{ L"HKEY_CURRENT_USER_LOCAL_SETTINGS", HKEY_CURRENT_USER_LOCAL_SETTINGS },
+		{ L"HKEY_LOCAL_MACHINE",               HKEY_LOCAL_MACHINE },
+		{ L"HKEY_PERFORMANCE_DATA",            HKEY_PERFORMANCE_DATA },
+		{ L"HKEY_PERFORMANCE_NLSTEXT",         HKEY_PERFORMANCE_NLSTEXT },
+		{ L"HKEY_PERFORMANCE_TEXT",            HKEY_PERFORMANCE_TEXT },
+		{ L"HKEY_USERS",                       HKEY_USERS }
+	};
+
+	const std::map<std::wstring, std::wstring> rootMap = {
+		{ L"HKCR", L"HKEY_CLASSES_ROOT" },
+		{ L"HKCC", L"HKEY_CURRENT_CONFIG" },
+		{ L"HKCU", L"HKEY_CURRENT_USER" },
+		{ L"HKLM", L"HKEY_LOCAL_MACHINE" },
+		{ L"HKU",  L"HKEY_USERS" }
+	};
+
+	std::wstring* resolveRootName(std::wstring& key) {
+		auto it = rootMap.find(key);
+		auto it2 = rootKeys.find(it == rootMap.end() ? key : it->second);
+		return it2 == rootKeys.end() ? NULL : (std::wstring*)&it2->first;
 	}
 
-#define THROW_ERROR_1(code, msg, arg1) \
-	{ \
-		char buffer[1024]; \
-		snprintf(buffer, 1024, msg, arg1); \
-		napi_throw_error(env, code, buffer); \
+	HKEY resolveRootKey(napi_env env, std::wstring& key) {
+		std::wstring* resolvedRoot = resolveRootName(key);
+
+		if (!resolvedRoot) {
+			THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", key.c_str())
+			return NULL;
+		}
+
+		return rootKeys.find(*resolvedRoot)->second;
 	}
-
-#define THROW_ERROR_2(code, msg, arg1, arg2) \
-	{ \
-		char buffer[1024]; \
-		snprintf(buffer, 1024, msg, arg1, arg2); \
-		napi_throw_error(env, code, buffer); \
-	}
-
-#define NAPI_ARGV_WSTRING(name, size, i) \
-	char16_t name##_char16[size]; \
-	size_t name##_len; \
-	if (napi_get_value_string_utf16(env, argv[i], (char16_t*)&name##_char16, size, &name##_len) != napi_ok) { \
-		napi_throw_error(env, "EINVAL", "Expected string"); \
-		return NULL; \
-	} \
-	std::u16string name##_str16(name##_char16); \
-	std::wstring name(name##_str16.begin(), name##_str16.end());
-
-#define FORMAT_ERROR(status, code, message) \
-	char msg[512]; \
-	::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, status, NULL, (LPTSTR)&msg, 512, NULL); \
-	TRIM_EXTRA_LINES(msg); \
-	THROW_ERROR_2(code, message ": %s (code %d)", msg, status);
-
-#define ASSERT_STATUS(status, code, message) \
-	if (status != ERROR_SUCCESS) { \
-		if (status == 2) { \
-			THROW_ERROR_1("ERR_WINREG_NOT_FOUND", "Registry key or value not found (code %d)", status) \
-		} else { \
-			FORMAT_ERROR(status, code, message) \
-		} \
-		return NULL; \
-	}
-
-#define SET_FROM_REGISTRY(fn, buffer, maxSize, code, dest, push) \
-	DWORD size = maxSize; \
-	LSTATUS status = ::fn(key, i, buffer, &size, NULL, NULL, NULL, NULL); \
-	if (status != ERROR_SUCCESS) { \
-		FORMAT_ERROR(status, code, #fn " failed") \
-		throw; \
-	} \
-	std::wstring subkey_wstr(buffer); \
-	std::u16string subkey_str16(subkey_wstr.begin(), subkey_wstr.end()); \
-	napi_value result; \
-	if (napi_create_string_utf16(env, subkey_str16.c_str(), NAPI_AUTO_LENGTH, &result) != napi_ok) { \
-		napi_throw_error(env, NULL, "napi_create_string_utf16 failed"); \
-		throw; \
-	} \
-	if (napi_call_function(env, dest, push, 1, &result, NULL) != napi_ok) { \
-		napi_throw_error(env, NULL, "napi_call_function failed"); \
-		throw; \
-	}
-
-struct cmp_str {
-	bool operator()(char const *a, char const *b) const {
-		return std::strcmp(a, b) < 0;
-	}
-};
-
-const std::map<const char*, const char*, cmp_str> rootMap = {
-	{ "HKCR", "HKEY_CLASSES_ROOT" },
-	{ "HKCC", "HKEY_CURRENT_CONFIG" },
-	{ "HKCU", "HKEY_CURRENT_USER" },
-	{ "HKLM", "HKEY_LOCAL_MACHINE" },
-	{ "HKU",  "HKEY_USERS" }
-};
-
-const std::map<const char*, HKEY, cmp_str> rootKeys = {
-	{ "HKEY_CLASSES_ROOT",                HKEY_CLASSES_ROOT },
-	{ "HKEY_CURRENT_CONFIG",              HKEY_CURRENT_CONFIG },
-	{ "HKEY_CURRENT_USER",                HKEY_CURRENT_USER },
-	{ "HKEY_CURRENT_USER_LOCAL_SETTINGS", HKEY_CURRENT_USER_LOCAL_SETTINGS },
-	{ "HKEY_LOCAL_MACHINE",               HKEY_LOCAL_MACHINE },
-	{ "HKEY_PERFORMANCE_DATA",            HKEY_PERFORMANCE_DATA },
-	{ "HKEY_PERFORMANCE_NLSTEXT",         HKEY_PERFORMANCE_NLSTEXT },
-	{ "HKEY_PERFORMANCE_TEXT",            HKEY_PERFORMANCE_TEXT },
-	{ "HKEY_USERS",                       HKEY_USERS }
-};
-
-const char* resolveRootName(const char* key) {
-	auto it = rootMap.find(key);
-	return it == rootMap.end() ? key : it->second;
 }
 
-HKEY resolveRootKey(napi_env env, const char* key) {
-	auto it = rootKeys.find(resolveRootName(key));
-	if (it == rootKeys.end()) {
-		THROW_ERROR_1("ERR_WINREG_INVALID_KEY", "Invalid registry root key \"%s\"", key)
-		return NULL;
-	}
-	return it->second;
-}
+using namespace winreglib;
 
 NAPI_METHOD(get) {
-	NAPI_ARGV(3)
-	NAPI_ARGV_UTF8(rootName, 32, 0)
-	NAPI_ARGV_WSTRING(subkey, 256, 1)
-	NAPI_ARGV_WSTRING(valueName, 256, 2)
+	NAPI_ARGV(2)
+	__NAPI_ARGV_WSTRING(key, 1024, 0)
+	__NAPI_ARGV_WSTRING(valueName, 256, 1)
 
-	HKEY root = resolveRootKey(env, rootName);
+	std::string::size_type p = key.find('\\');
+	if (p == std::string::npos) {
+		napi_throw_error(env, "ERR_NO_SUBKEY", "Expected key to contain both a root and subkey");
+		return NULL;
+	}
+
+	std::wstring subkey = key.substr(p + 1);
+	key.erase(p);
+
+	// wprintf(L"key=%ls\n", key.c_str());
+	// wprintf(L"subkey=%ls\n", subkey.c_str());
+	// wprintf(L"valueName=%ls\n", valueName.c_str());
+
+	HKEY hroot = resolveRootKey(env, key);
 	DWORD keyType = 0;
 	DWORD dataSize = 0;
 
-	LSTATUS status = ::RegGetValueW(root, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, &keyType, NULL, &dataSize);
-	ASSERT_STATUS(status, "ERR_WINREG_GET_VALUE", "RegGetValue() failed")
+	LSTATUS status = RegGetValueW(hroot, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, &keyType, NULL, &dataSize);
+	ASSERT_STATUS(status, "ERR_WINREG_GET_VALUE", L"RegGetValue() failed")
 
 	// printf("Type=%ld Size=%ld\n", keyType, dataSize);
 
 	BYTE* data = new BYTE[dataSize];
-	status = ::RegGetValueW(root, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, NULL, data, &dataSize);
+	status = RegGetValueW(hroot, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, NULL, data, &dataSize);
 	if (status != ERROR_SUCCESS) {
-		FORMAT_ERROR(status, "ERR_WINREG_GET_VALUE", "RegGetValue() failed")
+		FORMAT_ERROR(status, "ERR_WINREG_GET_VALUE", L"RegGetValue() failed")
 		delete[] data;
 		return NULL;
 	}
@@ -216,7 +160,7 @@ NAPI_METHOD(get) {
 			break;
 
 		default:
-			THROW_ERROR_1("ERR_WINREG_UNSUPPORTED_KEY_TYPE", "Unsupported key type: %d", keyType);
+			THROW_ERROR_1("ERR_WINREG_UNSUPPORTED_KEY_TYPE", L"Unsupported key type: %d", keyType);
 	}
 
 	delete[] data;
@@ -225,41 +169,57 @@ NAPI_METHOD(get) {
 }
 
 NAPI_METHOD(list) {
-	NAPI_ARGV(2);
-	NAPI_ARGV_UTF8(rootName, 32, 0)
-	NAPI_ARGV_WSTRING(subkey, 256, 1)
+	NAPI_ARGV(1);
+	__NAPI_ARGV_WSTRING(key, 1024, 0)
 
-	napi_value resolvedRoot;
+	std::string::size_type p = key.find('\\');
+	if (p == std::string::npos) {
+		napi_throw_error(env, "ERR_NO_SUBKEY", "Expected key to contain both a root and subkey");
+		return NULL;
+	}
+
+	std::wstring subkey = key.substr(p + 1);
+	key.erase(p);
+
+	// wprintf(L"key=%ls\n", key.c_str());
+	// wprintf(L"subkey=%ls\n", subkey.c_str());
+
+	HKEY hroot = resolveRootKey(env, key);
+	HKEY hkey;
+	LSTATUS status = RegOpenKeyExW(hroot, subkey.c_str(), 0, KEY_READ, &hkey);
+	ASSERT_STATUS(status, "ERR_WINREG_OPEN_KEY", L"RegOpenKeyEx() failed")
+
+	std::wstring* resolvedRoot = resolveRootName(key);
+	if (!resolvedRoot) {
+		THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", key.c_str())
+		return NULL;
+	}
+
 	napi_value rval;
 	napi_value subkeys;
 	napi_value subkeysPush;
 	napi_value values;
 	napi_value valuesPush;
 
-	NAPI_STATUS_THROWS(napi_create_string_utf8(env, resolveRootName(rootName), NAPI_AUTO_LENGTH, &resolvedRoot))
 	NAPI_STATUS_THROWS(napi_create_object(env, &rval))
 	NAPI_STATUS_THROWS(napi_create_array(env, &subkeys))
 	NAPI_STATUS_THROWS(napi_create_array(env, &values))
-	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "root", resolvedRoot))
-	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "path", argv[1]))
+	SET_PROP_FROM_WSTRING(rval, "root", resolvedRoot)
+	SET_PROP_FROM_WSTRING(rval, "path", &subkey)
 	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "subkeys", subkeys))
 	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "values", values))
 	NAPI_STATUS_THROWS(napi_get_named_property(env, subkeys, "push", &subkeysPush))
 	NAPI_STATUS_THROWS(napi_get_named_property(env, values, "push", &valuesPush))
 
-	HKEY root = resolveRootKey(env, rootName);
-	HKEY key;
-	LSTATUS status = ::RegOpenKeyExW(root, subkey.c_str(), 0, KEY_READ, &key);
-	ASSERT_STATUS(status, "ERR_WINREG_OPEN_KEY", "RegOpenKeyEx() failed")
-
 	DWORD numSubkeys = 0;
 	DWORD maxSubkeyLength = 0;
 	DWORD numValues = 0;
 	DWORD maxValueLength = 0;
-	status = ::RegQueryInfoKeyW(key, NULL, NULL, NULL, &numSubkeys, &maxSubkeyLength, NULL, &numValues, &maxValueLength, NULL, NULL, NULL);
+
+	status = RegQueryInfoKeyW(hkey, NULL, NULL, NULL, &numSubkeys, &maxSubkeyLength, NULL, &numValues, &maxValueLength, NULL, NULL, NULL);
 	if (status != ERROR_SUCCESS) {
-		FORMAT_ERROR(status, "ERR_WINREG_QUERY_INFO_KEY", "RegQueryInfoKey failed")
-		::RegCloseKey(key);
+		FORMAT_ERROR(status, "ERR_WINREG_QUERY_INFO_KEY", L"RegQueryInfoKey() failed")
+		RegCloseKey(hkey);
 		return NULL;
 	}
 
@@ -270,41 +230,71 @@ NAPI_METHOD(list) {
 
 	try {
 		for (DWORD i = 0; i < numSubkeys; ++i) {
-			SET_FROM_REGISTRY(RegEnumKeyExW, buffer, maxSize, "ERR_WINREG_ENUM_KEY", subkeys, subkeysPush)
+			SET_FROM_REGISTRY(RegEnumKeyExW, hkey, i, buffer, maxSize, "ERR_WINREG_ENUM_KEY", subkeys, subkeysPush)
 		}
 
 		for (DWORD i = 0; i < numValues; ++i) {
-			SET_FROM_REGISTRY(RegEnumValueW, buffer, maxSize, "ERR_WINREG_ENUM_VALUE", values, valuesPush)
+			SET_FROM_REGISTRY(RegEnumValueW, hkey, i, buffer, maxSize, "ERR_WINREG_ENUM_VALUE", values, valuesPush)
 		}
 	} catch (...) {
 		rval = NULL;
 	}
 
 	delete[] buffer;
-	::RegCloseKey(key);
+	RegCloseKey(hkey);
 	return rval;
 }
 
 NAPI_METHOD(watch) {
 	NAPI_ARGV(2);
-	NAPI_ARGV_UTF8(rootName, 32, 0)
-	NAPI_ARGV_WSTRING(subkey, 256, 1)
+	__NAPI_ARGV_WSTRING(key, 1024, 0)
+	napi_value callback = argv[1];
 
-	HKEY root = resolveRootKey(env, rootName);
-	HKEY key;
-	LSTATUS status = ::RegOpenKeyExW(root, subkey.c_str(), 0, KEY_READ, &key);
-	ASSERT_STATUS(status, "ERR_WINREG_OPEN_KEY", "RegOpenKeyEx() failed")
+	std::string::size_type p = key.find('\\');
+	if (p != std::string::npos) {
+		std::wstring root = key.substr(0, p);
+		auto it = rootMap.find(root);
+		if (it != rootMap.end()) {
+			root = it->second;
+		}
+		auto it2 = rootKeys.find(root);
+		if (it2 == rootKeys.end()) {
+			THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", root.c_str())
+			return NULL;
+		}
+		key = root + key.substr(p);
+	}
 
-	// LSTATUS status = ::RegNotifyChangeKeyValue(key)
+	// wprintf(L"key=%ls\n", key.c_str());
 
-	return 0;
+	const int64_t id64 = watchman->add(env, key, callback);
+
+	napi_value id;
+	napi_create_int64(env, id64, &id);
+	return id;
 }
 
 NAPI_METHOD(unwatch) {
 	NAPI_ARGV(1);
-	NAPI_ARGV_UINT32(id, 0);
 
-	return 0;
+	int64_t id = 0;
+	if (napi_get_value_int64(env, argv[0], &id) != napi_ok) {
+		napi_throw_error(env, "EINVAL", "Expected id to be an unsigned number");
+		return NULL;
+	}
+
+	watchman->remove(id);
+
+	napi_value rval;
+	NAPI_STATUS_THROWS(napi_get_undefined(env, &rval));
+	return rval;
+}
+
+void cleanup(void* arg) {
+	if (watchman) {
+		delete watchman;
+		watchman = NULL;
+	}
 }
 
 NAPI_INIT() {
@@ -312,42 +302,8 @@ NAPI_INIT() {
 	NAPI_EXPORT_FUNCTION(list);
 	NAPI_EXPORT_FUNCTION(watch);
 	NAPI_EXPORT_FUNCTION(unwatch);
+
+	NAPI_STATUS_THROWS(napi_add_env_cleanup_hook(env, cleanup, NULL));
+
+	watchman = new Watchman(env);
 }
-
-/*
-HKEY hKey;
-
-  //Check if the registry exists
-  DWORD lRv = RegOpenKeyEx(
-	HKEY_CURRENT_USER,
-	L"Software\\Zahid",
-	0,
-	KEY_READ,
-	&hKey
-  );
-
-  if (lRv == ERROR_SUCCESS)
-  {
-	DWORD BufferSize = sizeof(DWORD);
-	DWORD dwRet;
-	DWORD cbData;
-	DWORD cbVal = 0;
-
-	dwRet = RegQueryValueEx(
-	  hKey,
-	  L"Something",
-	  NULL,
-	  NULL,
-	  (LPBYTE)&cbVal,
-	  &cbData
-	);
-
-	if( dwRet == ERROR_SUCCESS )
-	  cout<<"\nValue of Something is " << cbVal << endl;
-	else cout<<"\nRegQueryValueEx failed " << dwRet << endl;
-  }
-  else
-  {
-	cout<<"RegOpenKeyEx failed " << lRv << endl;
-  }
-  */

@@ -5,7 +5,9 @@
 .git*
 .nyc_output
 .travis.yml
+.vscode
 /build
+/prebuilds
 junit.xml
 node_modules
 npm-debug.log

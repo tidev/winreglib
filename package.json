@@ -19,7 +19,11 @@
 	"scripts": {
 		"install": "node ./bin/run.js node-gyp-build",
 		"prebuild": "prebuildify --target=node@ --napi=true --strip",
-		"rebuild": "node-gyp rebuild",
+		"build": "node-gyp -j 16 build",
+		"build-debug": "node-gyp -j 16 build --debug",
+		"clean": "node-gyp clean",
+		"rebuild": "node-gyp -j 16 rebuild",
+		"rebuild-debug": "node-gyp -j 16 rebuild --debug",
 		"test": "mocha -r chai test/**/test-*.js"
 	},
 	"dependencies": {
@@ -38,6 +42,6 @@
 		"url": "git://github.com/appcelerator/winreglib.git"
 	},
 	"engines": {
-		"node": ">=8.10.0"
+		"node": ">=10.2.0"
 	}
 }
