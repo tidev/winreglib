@@ -227,7 +227,7 @@ describe('watch()', () => {
 		throw new Error('Expected error');
 	});
 
-	it('should watch existing key', async function () {
+	it('should watch existing key for new subkey', async function () {
 		this.timeout(15000);
 		this.slow(14000);
 
@@ -265,5 +265,85 @@ describe('watch()', () => {
 		} finally {
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		}
+	});
+
+	it('should watch existing key for value change', async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib');
+
+		try {
+			const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib');
+			let counter = 0;
+
+			await new Promise((resolve, reject) => {
+				handle.on('change', evt => {
+					try {
+						expect(evt).to.be.an('object');
+						switch (counter++) {
+							case 0:
+								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								reg('delete', 'HKCU\\Software\\winreglib', '/f', '/v', 'foo');
+								break;
+
+							case 1:
+								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								resolve();
+								break;
+						}
+					} catch (e) {
+						reject(e);
+					}
+				});
+
+				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib', '/v', 'foo', '/t', 'REG_SZ', '/d', 'bar'), 500);
+			});
+
+			handle.stop();
+		} finally {
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		}
+	});
+
+	it('should watch a key that does not exist',async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib');
+
+		// TODO
+	});
+
+	it('should watch a key whose parent does not exist',async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib');
+
+		// TODO
+	});
+
+	it('should watch a key that gets deleted', async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib');
+
+		// TODO
+	});
+
+	it('should watch a key whose parent gets deleted', async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib');
+
+		// TODO
 	});
 });
