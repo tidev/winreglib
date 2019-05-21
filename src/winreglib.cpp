@@ -1,6 +1,7 @@
 #include "winreglib.h"
 #include "watchman.h"
 #include <windows.h>
+#include <memory>
 
 namespace winreglib {
 	winreglib::Watchman* watchman = NULL;
@@ -41,10 +42,14 @@ namespace winreglib {
 
 		return rootKeys.find(*resolvedRoot)->second;
 	}
+
+	napi_ref logRef = NULL;
+	LOG_DEBUG_VARS
 }
 
-using namespace winreglib;
-
+/**
+ * get() implementation for getting a value for the given key and valueName.
+ */
 NAPI_METHOD(get) {
 	NAPI_ARGV(2)
 	__NAPI_ARGV_WSTRING(key, 1024, 0)
@@ -59,18 +64,16 @@ NAPI_METHOD(get) {
 	std::wstring subkey = key.substr(p + 1);
 	key.erase(p);
 
-	// wprintf(L"key=%ls\n", key.c_str());
-	// wprintf(L"subkey=%ls\n", subkey.c_str());
-	// wprintf(L"valueName=%ls\n", valueName.c_str());
+	LOG_DEBUG_3("get", L"key=\"%ls\" subkey=\"%ls\" valueName=\"%ls\"", key.c_str(), subkey.c_str(), valueName.c_str())
 
-	HKEY hroot = resolveRootKey(env, key);
+	HKEY hroot = winreglib::resolveRootKey(env, key);
 	DWORD keyType = 0;
 	DWORD dataSize = 0;
 
 	LSTATUS status = RegGetValueW(hroot, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, &keyType, NULL, &dataSize);
-	ASSERT_STATUS(status, "ERR_WINREG_GET_VALUE", L"RegGetValue() failed")
+	ASSERT_WIN32_STATUS(status, "ERR_WINREG_GET_VALUE", L"RegGetValue() failed")
 
-	// printf("Type=%ld Size=%ld\n", keyType, dataSize);
+	LOG_DEBUG_2("get", L"Type=%ld Size=%ld", keyType, dataSize);
 
 	BYTE* data = new BYTE[dataSize];
 	status = RegGetValueW(hroot, subkey.c_str(), valueName.c_str(), RRF_RT_ANY, NULL, data, &dataSize);
@@ -168,6 +171,81 @@ NAPI_METHOD(get) {
 	return rval;
 }
 
+/**
+ * Emits queued log messages.
+ */
+static void dispatchLog(uv_async_t* handle) {
+	napi_env env = (napi_env)handle->data;
+	napi_handle_scope scope;
+	napi_value global, logFn, rval;
+
+	NAPI_FATAL("dispatchLog", napi_open_handle_scope(env, &scope))
+	NAPI_FATAL("dispatchLog", napi_get_global(env, &global))
+	NAPI_FATAL("dispatchLog", napi_get_reference_value(env, winreglib::logRef, &logFn))
+
+	std::lock_guard<std::mutex> lock(winreglib::logLock);
+
+	while (!winreglib::logQueue.empty()) {
+		std::shared_ptr<winreglib::LogMessage> obj = winreglib::logQueue.front();
+		winreglib::logQueue.pop();
+		napi_value argv[2];
+
+		if (obj->ns.length()) {
+			NAPI_FATAL("dispatchLog", napi_create_string_utf8(env, obj->ns.c_str(), obj->ns.length(), &argv[0]))
+		} else {
+			NAPI_FATAL("dispatchLog", napi_get_null(env, &argv[0]))
+		}
+		NAPI_FATAL("dispatchLog", napi_create_string_utf16(env, obj->msg.c_str(), obj->msg.length(), &argv[1]))
+
+		// we have to create an async context to prevent domain.enter error
+		napi_value resName;
+		napi_create_string_utf8(env, "winreglib.log", NAPI_AUTO_LENGTH, &resName);
+		napi_async_context ctx;
+		napi_async_init(env, NULL, resName, &ctx);
+
+		// emit the log message
+		napi_status status = napi_make_callback(env, ctx, global, logFn, 2, argv, &rval);
+
+		napi_async_destroy(env, ctx);
+
+		NAPI_FATAL("dispatchLog", status)
+	}
+}
+
+/**
+ * init() implementation for wiring up the log message notification handler and printing the
+ * winreglib banner.
+ */
+NAPI_METHOD(init) {
+	NAPI_ARGV(1);
+	napi_value logFn = argv[0];
+
+	uv_loop_t* loop;
+	napi_get_uv_event_loop(env, &loop);
+	winreglib::logNotify.data = env;
+	uv_async_init(loop, &winreglib::logNotify, &dispatchLog);
+	uv_unref((uv_handle_t*)&winreglib::logNotify);
+
+	NAPI_STATUS_THROWS(napi_create_reference(env, logFn, 1, &winreglib::logRef))
+
+	napi_value global, result, args[2];
+	const napi_node_version* ver;
+	uint32_t apiVersion;
+	NAPI_STATUS_THROWS(napi_get_global(env, &global))
+	NAPI_STATUS_THROWS(napi_get_null(env, &args[0]))
+	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
+	NAPI_STATUS_THROWS(napi_get_version(env, &apiVersion))
+	char banner[128];
+	snprintf(banner, 128, "v" WINREGLIB_VERSION " <" WINREGLIB_URL "> (%s %d.%d.%d/n-api %d)", ver->release, ver->major, ver->minor, ver->patch, apiVersion);
+	NAPI_STATUS_THROWS(napi_create_string_utf8(env, banner, strlen(banner), &args[1]))
+	NAPI_STATUS_THROWS(napi_call_function(env, global, logFn, 2, args, &result))
+
+	NAPI_RETURN_UNDEFINED
+}
+
+/**
+ * list() implementation for retrieving all subkeys and values for a given key.
+ */
 NAPI_METHOD(list) {
 	NAPI_ARGV(1);
 	__NAPI_ARGV_WSTRING(key, 1024, 0)
@@ -181,15 +259,14 @@ NAPI_METHOD(list) {
 	std::wstring subkey = key.substr(p + 1);
 	key.erase(p);
 
-	// wprintf(L"key=%ls\n", key.c_str());
-	// wprintf(L"subkey=%ls\n", subkey.c_str());
+	LOG_DEBUG_2("list", L"key=\"%ls\" subkey=\"%ls\"", key.c_str(), subkey.c_str())
 
-	HKEY hroot = resolveRootKey(env, key);
+	HKEY hroot = winreglib::resolveRootKey(env, key);
 	HKEY hkey;
 	LSTATUS status = RegOpenKeyExW(hroot, subkey.c_str(), 0, KEY_READ, &hkey);
-	ASSERT_STATUS(status, "ERR_WINREG_OPEN_KEY", L"RegOpenKeyEx() failed")
+	ASSERT_WIN32_STATUS(status, "ERR_WINREG_OPEN_KEY", L"RegOpenKeyEx() failed")
 
-	std::wstring* resolvedRoot = resolveRootName(key);
+	std::wstring* resolvedRoot = winreglib::resolveRootName(key);
 	if (!resolvedRoot) {
 		THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", key.c_str())
 		return NULL;
@@ -223,7 +300,7 @@ NAPI_METHOD(list) {
 		return NULL;
 	}
 
-	// printf("%d keys (max %d), %d values (max %d)\n", numSubkeys, maxSubkeyLength, numValues, maxValueLength);
+	LOG_DEBUG_4("list", L"%d keys (max %d), %d values (max %d)", numSubkeys, maxSubkeyLength, numValues, maxValueLength)
 
 	DWORD maxSize = (maxSubkeyLength > maxValueLength ? maxSubkeyLength : maxValueLength) + 1;
 	wchar_t* buffer = new wchar_t[maxSize];
@@ -245,65 +322,84 @@ NAPI_METHOD(list) {
 	return rval;
 }
 
-NAPI_METHOD(watch) {
+/**
+ * Common watch/unwatch boilerplate.
+ */
+napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAction action) {
 	NAPI_ARGV(2);
 	__NAPI_ARGV_WSTRING(key, 1024, 0)
-	napi_value callback = argv[1];
+	napi_value emit = argv[1];
 
 	std::string::size_type p = key.find('\\');
-	if (p != std::string::npos) {
-		std::wstring root = key.substr(0, p);
-		auto it = rootMap.find(root);
-		if (it != rootMap.end()) {
-			root = it->second;
-		}
-		auto it2 = rootKeys.find(root);
-		if (it2 == rootKeys.end()) {
-			THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", root.c_str())
-			return NULL;
-		}
-		key = root + key.substr(p);
-	}
-
-	// wprintf(L"key=%ls\n", key.c_str());
-
-	const int64_t id64 = watchman->add(env, key, callback);
-
-	napi_value id;
-	napi_create_int64(env, id64, &id);
-	return id;
-}
-
-NAPI_METHOD(unwatch) {
-	NAPI_ARGV(1);
-
-	int64_t id = 0;
-	if (napi_get_value_int64(env, argv[0], &id) != napi_ok) {
-		napi_throw_error(env, "EINVAL", "Expected id to be an unsigned number");
+	if (p == std::string::npos) {
+		napi_throw_error(env, "ERR_NO_SUBKEY", "Expected key to contain both a root and subkey");
 		return NULL;
 	}
 
-	watchman->remove(id);
+	std::wstring root = key.substr(0, p);
+	auto it = winreglib::rootMap.find(root);
+	if (it != winreglib::rootMap.end()) {
+		root = it->second;
+	}
+	auto it2 = winreglib::rootKeys.find(root);
+	if (it2 == winreglib::rootKeys.end()) {
+		THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", root.c_str())
+		return NULL;
+	}
+	key = root + key.substr(p);
 
-	napi_value rval;
-	NAPI_STATUS_THROWS(napi_get_undefined(env, &rval));
-	return rval;
+	char* ns = action == winreglib::Watch ? "watch" : "unwatch";
+	LOG_DEBUG_1(ns, L"key=\"%ls\"", key.c_str())
+
+	winreglib::watchman->config(key, emit, action);
+
+	NAPI_RETURN_UNDEFINED
 }
 
+/**
+ * watch() implementation to watch a key for changes.
+ */
+NAPI_METHOD(watch) {
+	return watchHelper(env, info, winreglib::Watch);
+}
+
+/**
+ * unwatch() implementation to stop watching a key for changes.
+ */
+NAPI_METHOD(unwatch) {
+	return watchHelper(env, info, winreglib::Unwatch);
+}
+
+/**
+ * Destroys the Watchman instance and closes open handles.
+ */
 void cleanup(void* arg) {
-	if (watchman) {
-		delete watchman;
-		watchman = NULL;
+	napi_env env = (napi_env)arg;
+
+	if (winreglib::watchman) {
+		delete winreglib::watchman;
+		winreglib::watchman = NULL;
+	}
+
+	uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
+
+	if (winreglib::logRef) {
+		napi_delete_reference(env, winreglib::logRef);
+		winreglib::logRef = NULL;
 	}
 }
 
+/**
+ * Wire up the public API and cleanup handler and creates the Watchman instance.
+ */
 NAPI_INIT() {
 	NAPI_EXPORT_FUNCTION(get);
+	NAPI_EXPORT_FUNCTION(init);
 	NAPI_EXPORT_FUNCTION(list);
 	NAPI_EXPORT_FUNCTION(watch);
 	NAPI_EXPORT_FUNCTION(unwatch);
 
-	NAPI_STATUS_THROWS(napi_add_env_cleanup_hook(env, cleanup, NULL));
+	NAPI_STATUS_THROWS(napi_add_env_cleanup_hook(env, cleanup, env));
 
-	watchman = new Watchman(env);
+	winreglib::watchman = new winreglib::Watchman(env);
 }

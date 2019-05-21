@@ -6,7 +6,24 @@
 #include <map>
 #include <napi-macros.h>
 #include <node_api.h>
+#include <queue>
 #include <string>
+
+namespace winreglib {
+	struct LogMessage {
+		LogMessage() {}
+		LogMessage(const std::string ns, const std::u16string msg) : ns(ns), msg(msg) {}
+		std::string ns;
+		std::u16string msg;
+	};
+}
+
+#define WINREGLIB_VERSION "1.0.0"
+
+#define WINREGLIB_URL "https://github.com/appcelerator/winreglib"
+
+// enable the following line to bypass the message queue and print the raw debug log messages to stdout
+#define ENABLE_RAW_DEBUGGING 0
 
 #define TRIM_EXTRA_LINES(str) \
 	{ \
@@ -16,58 +33,41 @@
 		} \
 	}
 
-#define THROW_ERROR(code, msg) \
+#define THROW_ERROR_PRE \
+	napi_value error; \
+	napi_value errCode; \
+	napi_value message;
+
+#define THROW_ERROR_POST(code, buffer) \
+	std::wstring wbuffer(buffer); \
+	std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
+	\
+	NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, ::strlen(code) + 1, &errCode)); \
+	NAPI_STATUS_THROWS(napi_create_string_utf16(env, u16buffer.c_str(), u16buffer.length(), &message)); \
+	\
+	napi_create_error(env, errCode, message, &error); \
+	napi_throw(env, error); \
+
+#define THROW_ERROR(code, buffer) \
 	{ \
-		napi_value error; \
-		napi_value errCode; \
-		napi_value message; \
-		\
-		std::wstring wbuffer(msg); \
-		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
-		\
-		NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, ::strlen(code) + 1, &errCode)); \
-		NAPI_STATUS_THROWS(napi_create_string_utf16(env, u16buffer.c_str(), u16buffer.length(), &message)); \
-		\
-		napi_create_error(env, errCode, message, &error); \
-		napi_throw(env, error); \
+		THROW_ERROR_PRE \
+		THROW_ERROR_POST(code, buffer) \
 	}
 
 #define THROW_ERROR_1(code, msg, arg1) \
 	{ \
-		napi_value error; \
-		napi_value errCode; \
-		napi_value message; \
-		\
+		THROW_ERROR_PRE \
 		wchar_t buffer[1024]; \
 		::swprintf(buffer, 1024, msg, arg1); \
-		\
-		std::wstring wbuffer(buffer); \
-		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
-		\
-		NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, ::strlen(code) + 1, &errCode)); \
-		NAPI_STATUS_THROWS(napi_create_string_utf16(env, u16buffer.c_str(), u16buffer.length(), &message)); \
-		\
-		napi_create_error(env, errCode, message, &error); \
-		napi_throw(env, error); \
+		THROW_ERROR_POST(code, buffer) \
 	}
 
 #define THROW_ERROR_2(code, msg, arg1, arg2) \
 	{ \
-		napi_value error; \
-		napi_value errCode; \
-		napi_value message; \
-		\
+		THROW_ERROR_PRE \
 		wchar_t buffer[1024]; \
 		::swprintf(buffer, 1024, msg, arg1, arg2); \
-		\
-		std::wstring wbuffer(buffer); \
-		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
-		\
-		NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, ::strlen(code) + 1, &errCode)); \
-		NAPI_STATUS_THROWS(napi_create_string_utf16(env, u16buffer.c_str(), u16buffer.length(), &message)); \
-		\
-		napi_create_error(env, errCode, message, &error); \
-		napi_throw(env, error); \
+		THROW_ERROR_POST(code, buffer) \
 	}
 
 #define __NAPI_ARGV_U16CHAR(name, size, i) \
@@ -86,13 +86,45 @@
 	__NAPI_ARGV_U16STRING(name##_str16, size, i) \
 	std::wstring name(name##_str16.begin(), name##_str16.end());
 
+#define NAPI_RETURN_UNDEFINED \
+	{ \
+		napi_value undef; \
+		NAPI_STATUS_THROWS(napi_get_undefined(env, &undef)); \
+		return undef; \
+	}
+
+#define NAPI_FATAL(ns, code) \
+	{ \
+		napi_status _status = code; \
+		if (_status == napi_pending_exception) { \
+			napi_value fatal; \
+			napi_get_and_clear_last_exception(env, &fatal); \
+			napi_fatal_exception(env, fatal); \
+			return; \
+		} else if (_status != napi_ok) { \
+			const napi_extended_error_info* error; \
+			::napi_get_last_error_info(env, &error); \
+			\
+			char msg[1024]; \
+			::snprintf(msg, 1024, ns ": %s (status=%d)", error->error_message, _status); \
+			\
+			napi_value fatal; \
+			if (::napi_create_string_utf8(env, msg, strlen(msg), &fatal) == napi_ok) { \
+				::napi_fatal_exception(env, fatal); \
+			} else { \
+				::fprintf(stderr, msg); \
+			} \
+			return; \
+		} \
+	}
+
 #define FORMAT_ERROR(status, code, message) \
 	char msg[512]; \
 	::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, status, NULL, (LPTSTR)&msg, 512, NULL); \
 	TRIM_EXTRA_LINES(msg); \
 	THROW_ERROR_2(code, message ": %hs (code %d)", msg, status);
 
-#define ASSERT_STATUS(status, code, message) \
+#define ASSERT_WIN32_STATUS(status, code, message) \
 	if (status != ERROR_SUCCESS) { \
 		if (status == 2) { \
 			THROW_ERROR("ERR_WINREG_NOT_FOUND", L"Registry key or value not found") \
@@ -132,23 +164,54 @@
 		NAPI_STATUS_THROWS(napi_set_named_property(env, obj, prop, value)) \
 	}
 
-#define LOG_NAPI_STATUS_ERROR(call, err) \
-	if ((call) != napi_ok) { \
-		printf(err "\n"); \
-		return; \
+#if ENABLE_RAW_DEBUGGING == 1
+	#define LOG_DEBUG_RAW(ns, wstring) ::wprintf(L"%hs: %s\n", ns, wstring.c_str());
+#else
+	#define LOG_DEBUG_RAW(ns, wstring)
+#endif
+
+#define LOG_DEBUG_VARS \
+	std::mutex logLock; \
+	uv_async_t logNotify; \
+	std::queue<std::shared_ptr<winreglib::LogMessage>> logQueue;
+
+#define LOG_DEBUG_EXTERN_VARS \
+	extern std::mutex logLock; \
+	extern uv_async_t logNotify; \
+	extern std::queue<std::shared_ptr<winreglib::LogMessage>> logQueue;
+
+#define LOG_DEBUG(ns, msg) \
+	{ \
+		std::wstring wbuffer(msg); \
+		LOG_DEBUG_RAW(ns, wbuffer) \
+		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
+		std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
+		std::lock_guard<std::mutex> lock(winreglib::logLock); \
+		winreglib::logQueue.push(obj); \
+		::uv_async_send(&winreglib::logNotify); \
 	}
 
-#define LOG_DEBUG_WIN32_ERROR(message, code) \
+#define LOG_DEBUG_FORMAT(ns, code) \
+	{ \
+		wchar_t* buffer = new wchar_t[1024]; \
+		::code; \
+		LOG_DEBUG(ns, buffer) \
+	}
+
+#define LOG_DEBUG_1(ns, msg, a1)             LOG_DEBUG_FORMAT(ns, swprintf(buffer, 1024, msg, a1))
+#define LOG_DEBUG_2(ns, msg, a1, a2)         LOG_DEBUG_FORMAT(ns, swprintf(buffer, 1024, msg, a1, a2))
+#define LOG_DEBUG_3(ns, msg, a1, a2, a3)     LOG_DEBUG_FORMAT(ns, swprintf(buffer, 1024, msg, a1, a2, a3))
+#define LOG_DEBUG_4(ns, msg, a1, a2, a3, a4) LOG_DEBUG_FORMAT(ns, swprintf(buffer, 1024, msg, a1, a2, a3, a4))
+
+#define LOG_DEBUG_THREAD_ID(ns, msg) \
+	LOG_DEBUG_1(ns, msg " (thread %zu)", std::hash<std::thread::id>{}(std::this_thread::get_id()))
+
+#define LOG_DEBUG_WIN32_ERROR(ns, message, code) \
 	if (code != ERROR_SUCCESS) { \
-		char msg[512]; \
-		::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, code, NULL, (LPTSTR)&msg, 512, NULL); \
-		TRIM_EXTRA_LINES(msg); \
-		::printf(message "%s (code %d)\n", msg, code); \
+		char errorMsg[512]; \
+		::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, code, NULL, (LPTSTR)&errorMsg, 512, NULL); \
+		TRIM_EXTRA_LINES(errorMsg); \
+		LOG_DEBUG_2(ns, message "%hs (code %d)", errorMsg, code); \
 	}
-
-#define LOG_DEBUG_THREAD_ID(msg) \
-	::printf(msg " (thread %zu)\n", std::hash<std::thread::id>{}(std::this_thread::get_id()));
-
-#define LOG_DEBUG(code) { code; }
 
 #endif

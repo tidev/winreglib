@@ -2,9 +2,12 @@ const fs = require('fs');
 const winreglib = require('../src/index');
 const { expect } = require('chai');
 const { spawnSync } = require('child_process');
+const snooplogg = require('snooplogg').default;
+
+const { log } = snooplogg('test:winreglib');
 
 const reg = (...args) => {
-	console.log('Executing: reg ' + args.join(' '));
+	log('Executing: reg ' + args.join(' '));
 	spawnSync('reg', args, { stdio: 'ignore' });
 };
 
@@ -224,7 +227,7 @@ describe('watch()', () => {
 		throw new Error('Expected error');
 	});
 
-	it.only('should watch existing key', async function () {
+	it('should watch existing key', async function () {
 		this.timeout(15000);
 		this.slow(14000);
 
@@ -238,16 +241,15 @@ describe('watch()', () => {
 			await new Promise((resolve, reject) => {
 				handle.on('change', evt => {
 					try {
-						console.log('CHANGE EVENT!', evt);
 						expect(evt).to.be.an('object');
 						switch (counter++) {
 							case 0:
-								expect(evt.action).to.equal('add');
-								reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f', '/va');
+								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f');
 								break;
 
 							case 1:
-								expect(evt.action).to.equal('delete');
+								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
 								resolve();
 								break;
 						}
@@ -256,7 +258,7 @@ describe('watch()', () => {
 					}
 				});
 
-				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
+				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
 			});
 
 			handle.stop();

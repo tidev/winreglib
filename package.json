@@ -28,7 +28,8 @@
 	},
 	"dependencies": {
 		"napi-macros": "^1.8.2",
-		"node-gyp-build": "^4.1.0"
+		"node-gyp-build": "^4.1.0",
+		"snooplogg": "^2.0.1"
 	},
 	"devDependencies": {
 		"chai": "^4.2.0",
