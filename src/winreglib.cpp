@@ -220,14 +220,17 @@ NAPI_METHOD(init) {
 	NAPI_ARGV(1);
 	napi_value logFn = argv[0];
 
+	// wire up the log notification handler
 	uv_loop_t* loop;
 	napi_get_uv_event_loop(env, &loop);
 	winreglib::logNotify.data = env;
 	uv_async_init(loop, &winreglib::logNotify, &dispatchLog);
 	uv_unref((uv_handle_t*)&winreglib::logNotify);
 
+	// create the reference for the emit log callback so it doesn't get GC'd
 	NAPI_STATUS_THROWS(napi_create_reference(env, logFn, 1, &winreglib::logRef))
 
+	// print the banner
 	napi_value global, result, args[2];
 	const napi_node_version* ver;
 	uint32_t apiVersion;
@@ -256,21 +259,24 @@ NAPI_METHOD(list) {
 		return NULL;
 	}
 
+	std::wstring root = key.substr(0, p);
 	std::wstring subkey = key.substr(p + 1);
-	key.erase(p);
 
-	LOG_DEBUG_2("list", L"key=\"%ls\" subkey=\"%ls\"", key.c_str(), subkey.c_str())
+	LOG_DEBUG_2("list", L"key=\"%ls\" subkey=\"%ls\"", root.c_str(), subkey.c_str())
 
-	HKEY hroot = winreglib::resolveRootKey(env, key);
+	HKEY hroot = winreglib::resolveRootKey(env, root);
 	HKEY hkey;
 	LSTATUS status = RegOpenKeyExW(hroot, subkey.c_str(), 0, KEY_READ, &hkey);
 	ASSERT_WIN32_STATUS(status, "ERR_WINREG_OPEN_KEY", L"RegOpenKeyEx() failed")
 
-	std::wstring* resolvedRoot = winreglib::resolveRootName(key);
+	std::wstring* resolvedRoot = winreglib::resolveRootName(root);
 	if (!resolvedRoot) {
 		THROW_ERROR_1("ERR_WINREG_INVALID_ROOT", L"Invalid registry root key \"%s\"", key.c_str())
 		return NULL;
 	}
+
+	// add back the resolved root
+	key = *resolvedRoot + L'\\' + subkey;
 
 	napi_value rval;
 	napi_value subkeys;
@@ -281,8 +287,8 @@ NAPI_METHOD(list) {
 	NAPI_STATUS_THROWS(napi_create_object(env, &rval))
 	NAPI_STATUS_THROWS(napi_create_array(env, &subkeys))
 	NAPI_STATUS_THROWS(napi_create_array(env, &values))
-	SET_PROP_FROM_WSTRING(rval, "root", resolvedRoot)
-	SET_PROP_FROM_WSTRING(rval, "path", &subkey)
+	SET_PROP_FROM_WSTRING(rval, "resolvedRoot", resolvedRoot)
+	SET_PROP_FROM_WSTRING(rval, "key", &key)
 	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "subkeys", subkeys))
 	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "values", values))
 	NAPI_STATUS_THROWS(napi_get_named_property(env, subkeys, "push", &subkeysPush))
@@ -328,7 +334,7 @@ NAPI_METHOD(list) {
 napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAction action) {
 	NAPI_ARGV(2);
 	__NAPI_ARGV_WSTRING(key, 1024, 0)
-	napi_value emit = argv[1];
+	napi_value listener = argv[1];
 
 	std::string::size_type p = key.find('\\');
 	if (p == std::string::npos) {
@@ -351,7 +357,7 @@ napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAc
 	char* ns = action == winreglib::Watch ? "watch" : "unwatch";
 	LOG_DEBUG_1(ns, L"key=\"%ls\"", key.c_str())
 
-	winreglib::watchman->config(key, emit, action);
+	winreglib::watchman->config(key, listener, action);
 
 	NAPI_RETURN_UNDEFINED
 }
@@ -381,7 +387,7 @@ void cleanup(void* arg) {
 		winreglib::watchman = NULL;
 	}
 
-	uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
+	// uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
 
 	if (winreglib::logRef) {
 		napi_delete_reference(env, winreglib::logRef);

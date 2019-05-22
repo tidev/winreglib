@@ -25,7 +25,7 @@ public:
 	Watchman(napi_env env);
 	~Watchman();
 
-	void config(const std::wstring& key, napi_value emit, WatchAction action);
+	void config(const std::wstring& key, napi_value listener, WatchAction action);
 
 private:
 	void dispatch();
@@ -39,7 +39,7 @@ private:
 	std::mutex activeLock;
 	std::vector<std::weak_ptr<WatchNode>> active;
 	uv_async_t notifyChange;
-	std::deque<std::weak_ptr<WatchNode>> changedNodes;
+	std::deque<std::shared_ptr<WatchNode>> changedNodes;
 	std::mutex changedNodesLock;
 };
 

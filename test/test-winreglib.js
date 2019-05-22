@@ -177,10 +177,10 @@ describe('list()', () => {
 		const result = winreglib.list('HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion');
 
 		expect(result).to.be.an('object');
-		expect(result).to.have.keys('root', 'path', 'subkeys', 'values');
+		expect(result).to.have.keys('resolvedRoot', 'key', 'subkeys', 'values');
 
-		expect(result.root).to.equal('HKEY_LOCAL_MACHINE');
-		expect(result.path).to.equal('SOFTWARE\\Microsoft\\Windows\\CurrentVersion');
+		expect(result.resolvedRoot).to.equal('HKEY_LOCAL_MACHINE');
+		expect(result.key).to.equal('HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion');
 
 		expect(result.subkeys).to.be.an('array');
 		for (const key of result.subkeys) {
@@ -240,6 +240,7 @@ describe('watch()', () => {
 
 			await new Promise((resolve, reject) => {
 				handle.on('change', evt => {
+					// console.log('CHANGE!', evt);
 					try {
 						expect(evt).to.be.an('object');
 						switch (counter++) {
@@ -261,6 +262,9 @@ describe('watch()', () => {
 				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
 			});
 
+			handle.stop();
+
+			// also test stop() being called twice
 			handle.stop();
 		} finally {
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');

@@ -1,4 +1,5 @@
 #include "watchman.h"
+#include <list>
 #include <node_api.h>
 #include <sstream>
 
@@ -9,16 +10,18 @@ using namespace winreglib;
  * background thread, and wires up the notification callback when a registry change occurs.
  */
 Watchman::Watchman(napi_env env) : env(env) {
+	// create the built-in events for controlling the background thread
 	term = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 	refresh = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
+	// initialize the root subkeys
 	root = std::make_shared<WatchNode>(env);
 	for (auto const& it : rootKeys) {
 		root->addSubkey(it.first, it.second);
 	}
 
+	// initialize the background thread that waits for win32 events
 	LOG_DEBUG_THREAD_ID("Watchman", L"Initializing async work")
-
 	napi_value asyncWorkName;
 	NAPI_STATUS_THROWS(::napi_create_string_utf8(env, "winreglib.runloop", NAPI_AUTO_LENGTH, &asyncWorkName));
 	NAPI_STATUS_THROWS(::napi_create_async_work(
@@ -31,6 +34,8 @@ Watchman::Watchman(napi_env env) : env(env) {
 		&asyncWork
 	));
 
+	// wire up our dispatch change handler into Node's event loop, then unref it so that we don't
+	// block Node from exiting
 	uv_loop_t* loop;
 	::napi_get_uv_event_loop(env, &loop);
 	notifyChange.data = this;
@@ -53,15 +58,14 @@ Watchman::~Watchman() {
  * Constructs the watcher tree and adds the listener callback to the watched node. Starts the
  * background thread that waits for win32 to signal an event.
  */
-void Watchman::config(const std::wstring& key, napi_value emit, WatchAction action) {
-	char* ns = action == Watch ? "Watchman::add" : "Watchman::remove";
+void Watchman::config(const std::wstring& key, napi_value listener, WatchAction action) {
 	if (action == Watch) {
-		LOG_DEBUG_1(ns, L"Adding \"%ls\"", key.c_str())
+		LOG_DEBUG_1("Watchman::config", L"Adding \"%ls\"", key.c_str())
 	} else {
-		LOG_DEBUG_1(ns, L"Removing \"%ls\"", key.c_str())
+		LOG_DEBUG_1("Watchman::config", L"Removing \"%ls\"", key.c_str())
 	}
 
-	std::shared_ptr<WatchNode> node = root;
+	std::shared_ptr<WatchNode> node(root);
 	std::wstring name;
 	std::wstringstream wss(key);
 	DWORD beforeCount = 0;
@@ -72,17 +76,20 @@ void Watchman::config(const std::wstring& key, napi_value emit, WatchAction acti
 		afterCount = beforeCount = active.size();
 	}
 
+	// parse the key while walking the watcher tree
 	while (std::getline(wss, name, L'\\')) {
 		auto it = node->subkeys.find(name);
 		if (it == node->subkeys.end()) {
+			// not found
 			if (action == Watch) {
+				// we're watching, so add the node
 				node = node->addSubkey(name, node);
 				++afterCount;
 				std::lock_guard<std::mutex> lock(activeLock);
 				active.push_back(std::weak_ptr<WatchNode>(node));
 			} else {
 				// node does not exist, nothing to remove
-				LOG_DEBUG_1(ns, L"Node \"%ls\" does not exist", name.c_str())
+				LOG_DEBUG_1("Watchman::config", L"Node \"%ls\" does not exist", name.c_str())
 				return;
 			}
 		} else {
@@ -91,17 +98,17 @@ void Watchman::config(const std::wstring& key, napi_value emit, WatchAction acti
 	}
 
 	if (action == Watch) {
-		node->addListener(emit);
+		// add the listener to the node
+		node->addListener(listener);
 	} else {
-		node->removeListener(emit);
+		// remove the listener from the node
+		node->removeListener(listener);
 
+		// prune the tree by blowing away an
 		while (node->parent && node->listeners.size() == 0 && node->subkeys.size() == 0) {
-			LOG_DEBUG_1(ns, L"Erasing node \"%ls\" from parent", node->name.c_str())
+			LOG_DEBUG_1("Watchman::config", L"Erasing node \"%ls\" from parent", node->name.c_str())
 
-			std::shared_ptr<WatchNode> parent = node->parent;
-			parent->subkeys.erase(node->name);
-
-			// remove from active list
+			// remove from the active list
 			std::lock_guard<std::mutex> lock(activeLock);
 			for (auto it = active.begin(); it != active.end(); ) {
 				auto activeNode = (*it).lock();
@@ -113,20 +120,30 @@ void Watchman::config(const std::wstring& key, napi_value emit, WatchAction acti
 				}
 			}
 
-			node = parent;
+			// remove the node from its parent's subkeys map
+			node->parent->subkeys.erase(node->name);
+
+			node = node->parent;
+			LOG_DEBUG_2("Watchman::config", L"Parent \"%ls\" now has %lld subkeys", node->name.c_str(), node->subkeys.size())
 		}
 	}
 
 	if (beforeCount == 0 && afterCount > 0) {
-		LOG_DEBUG_THREAD_ID(ns, L"Starting background thread")
+		LOG_DEBUG_THREAD_ID("Watchman::config", L"Starting background thread")
 		NAPI_STATUS_THROWS(::napi_queue_async_work(env, asyncWork))
 	} else if (beforeCount > 0 && afterCount == 0) {
-		LOG_DEBUG_THREAD_ID(ns, L"Signalling term event")
+		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling term event")
 		::SetEvent(term);
 	} else if (beforeCount != afterCount) {
-		LOG_DEBUG_THREAD_ID(ns, L"Signalling refresh event")
+		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling refresh event")
 		::SetEvent(refresh);
 	}
+
+	// print the node tree for debugging
+	std::wstring str;
+	root->print(str);
+	str.resize(str.length() - 1);
+	LOG_DEBUG("Watchman::config", str.c_str())
 }
 
 /**
@@ -136,61 +153,66 @@ void Watchman::config(const std::wstring& key, napi_value emit, WatchAction acti
 void Watchman::dispatch() {
 	LOG_DEBUG_THREAD_ID("Watchman::dispatch", L"Dispatching changes")
 
+	DWORD count = 0;
 	napi_handle_scope scope;
-	NAPI_FATAL("Watchman::dispatch", ::napi_open_handle_scope(env, &scope))
+	napi_value global, key, argv[2], listener, rval;
 
-	napi_value global;
+	// initialize the scope and variables that won't change
+	NAPI_FATAL("Watchman::dispatch", ::napi_open_handle_scope(env, &scope))
 	NAPI_FATAL("Watchman::dispatch", ::napi_get_global(env, &global))
+	NAPI_FATAL("Watchman::dispatch", ::napi_create_string_utf8(env, "change", NAPI_AUTO_LENGTH, &argv[0]))
+	NAPI_FATAL("Watchman::dispatch", ::napi_create_object(env, &argv[1]))
 
 	while (1) {
-		std::weak_ptr<WatchNode> weak;
-		DWORD count = 0;
+		std::shared_ptr<WatchNode> node;
+		count = 0;
 
+		// check if there are any changed nodes left...
+		// the first time we loop, we know there's at least one
 		{
 			std::lock_guard<std::mutex> lock(changedNodesLock);
+
 			if (changedNodes.empty()) {
 				break;
 			}
 
 			count = changedNodes.size();
-			weak = changedNodes.front();
+			node = changedNodes.front();
 			changedNodes.pop_front();
 		}
 
-		auto node = weak.lock();
-		if (!node) {
-			continue;
-		}
+		LOG_DEBUG_2("Watchman::dispatch", L"Dispatching change event for \"%ls\" (%d pending)", node->name.c_str(), --count)
 
-		LOG_DEBUG_1("Watchman::dispatch", L"Pending changes = %d", count)
-		LOG_DEBUG_1("Watchman::dispatch", L"Node = \"%ls\"", node->name.c_str())
-
-		napi_value argv[2];
-		NAPI_FATAL("Watchman::dispatch", ::napi_create_string_utf8(env, "change", NAPI_AUTO_LENGTH, &argv[0]))
-		NAPI_FATAL("Watchman::dispatch", ::napi_create_object(env, &argv[1]))
-
+		// construct the key
 		std::wstring wkey = node->name;
 		std::shared_ptr<WatchNode> tmp(node);
 		while (tmp = tmp->parent) {
 			wkey.insert(0, 1, '\\');
 			wkey.insert(0, tmp->name);
 		}
-
 		std::u16string u16key(wkey.begin(), wkey.end());
-		napi_value key;
 
 		NAPI_FATAL("Watchman::dispatch", ::napi_create_string_utf16(env, u16key.c_str(), NAPI_AUTO_LENGTH, &key))
 		NAPI_FATAL("Watchman::dispatch", ::napi_set_named_property(env, argv[1], "key", key))
 
-		for (napi_ref ref : node->listeners) {
-			napi_value emit;
-			::napi_get_reference_value(env, ref, &emit);
-			napi_value rval;
-			NAPI_FATAL("Watchman::dispatch", ::napi_make_callback(env, NULL, global, emit, 2, argv, &rval))
+		// make a copy of listeners since the original list can be modified when a previous
+		// listener callback has been called
+		std::list<napi_ref> listeners;
+		{
+			std::lock_guard<std::mutex> lock(node->listenersLock);
+			listeners = node->listeners;
+		}
+
+		// fire the listener callback
+		for (auto const& ref : listeners) {
+			NAPI_FATAL("Watchman::dispatch", ::napi_get_reference_value(env, ref, &listener))
+			if (listener != NULL) {
+				NAPI_FATAL("Watchman::dispatch", ::napi_make_callback(env, NULL, global, listener, 2, argv, &rval))
+			}
 		}
 	}
 
-	::napi_close_handle_scope(env, scope);
+	NAPI_FATAL("Watchman::dispatch", ::napi_close_handle_scope(env, scope))
 }
 
 /**
@@ -205,6 +227,8 @@ void Watchman::run() {
 	DWORD idx = 0;
 	std::vector<std::weak_ptr<WatchNode>> activeCopy;
 
+	// make a copy of all active nodes since we need to preserve the order to know which node
+	// changed based on the handle index
 	{
 		std::lock_guard<std::mutex> lock(activeLock);
 		LOG_DEBUG_1("Watchman::run", L"Populating active copy (count=%lld)", active.size())
@@ -212,13 +236,14 @@ void Watchman::run() {
 	}
 
 	while (1) {
-		count = activeCopy.size() + 2;
 		if (handles != NULL) {
 			delete[] handles;
 		}
-		handles = new HANDLE[count];
 
+		// WaitForMultipleObjects() wants an array of handles, so we must construct one
 		idx = 0;
+		count = activeCopy.size() + 2;
+		handles = new HANDLE[count];
 		handles[idx++] = term;
 		handles[idx++] = refresh;
 		for (auto it = activeCopy.begin(); it != activeCopy.end(); ) {
@@ -236,6 +261,7 @@ void Watchman::run() {
 
 		if (result == WAIT_OBJECT_0) {
 			// terminate
+			LOG_DEBUG("Watchman::run", L"Received terminate signal")
 			break;
 		}
 
@@ -263,17 +289,10 @@ void Watchman::run() {
 
 						{
 							std::lock_guard<std::mutex> lock(changedNodesLock);
-							bool found = false;
-
-							for (auto weak : changedNodes) {
-								auto changedNode = weak.lock();
-								if (changedNode && changedNode == node) {
-									found = true;
-									break;
-								}
-							}
-
-							if (!found) {
+							if (std::find(changedNodes.begin(), changedNodes.end(), node) != changedNodes.end()) {
+								LOG_DEBUG_1("Watchman::run", L"Node \"%ls\" is already in the changed list", node->name.c_str())
+							} else {
+								LOG_DEBUG_1("Watchman::run", L"Adding node \"%ls\" to the changed list", node->name.c_str())
 								changedNodes.push_back(node);
 							}
 						}
