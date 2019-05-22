@@ -217,6 +217,15 @@ static void dispatchLog(uv_async_t* handle) {
  * winreglib banner.
  */
 NAPI_METHOD(init) {
+	const napi_node_version* ver;
+	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
+	if (ver->major < 10 || (ver->major == 10 && ver->minor < 2)) {
+		char errorMsg[128];
+		snprintf(errorMsg, 128, "winreglib requires Node.js 10.2.0 or newer (currently %d.%d.%d)", ver->major, ver->minor, ver->patch);
+		napi_fatal_error(NULL, 0, errorMsg, strlen(errorMsg));
+		return NULL;
+	}
+
 	NAPI_ARGV(1);
 	napi_value logFn = argv[0];
 
@@ -232,11 +241,9 @@ NAPI_METHOD(init) {
 
 	// print the banner
 	napi_value global, result, args[2];
-	const napi_node_version* ver;
 	uint32_t apiVersion;
 	NAPI_STATUS_THROWS(napi_get_global(env, &global))
 	NAPI_STATUS_THROWS(napi_get_null(env, &args[0]))
-	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
 	NAPI_STATUS_THROWS(napi_get_version(env, &apiVersion))
 	char banner[128];
 	snprintf(banner, 128, "v" WINREGLIB_VERSION " <" WINREGLIB_URL "> (%s %d.%d.%d/n-api %d)", ver->release, ver->major, ver->minor, ver->patch, apiVersion);

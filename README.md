@@ -65,8 +65,8 @@ Retreives all subkeys and value names for a give key.
 
  * `key` (String) - The key beginning with the root.
 
-Returns an object with the resolved `root` (String), `path` (String), `subkeys` (Array[String]),
-and `values` (Array[String]).
+Returns an object with the resolved `resolvedRoot` (String), `key` (String), `subkeys`
+(Array[String]), and `values` (Array[String]).
 
 If `key` is not found, an `Error` is thrown.
 
@@ -77,8 +77,8 @@ console.log(result);
 ```
 
 ```js
-{ root: 'HKEY_LOCAL_MACHINE',
-  path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup',
+{ resolvedRoot: 'HKEY_LOCAL_MACHINE',
+  key: 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup',
   subkeys:
    [ 'DPI',
      'ImageServicingData',
