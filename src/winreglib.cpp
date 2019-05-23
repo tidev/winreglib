@@ -180,8 +180,18 @@ static void dispatchLog(uv_async_t* handle) {
 	napi_value global, logFn, rval;
 
 	NAPI_FATAL("dispatchLog", napi_open_handle_scope(env, &scope))
-	NAPI_FATAL("dispatchLog", napi_get_global(env, &global))
+
+	if (!winreglib::logRef) {
+		return;
+	}
+
 	NAPI_FATAL("dispatchLog", napi_get_reference_value(env, winreglib::logRef, &logFn))
+
+	if (logFn == NULL) {
+		return;
+	}
+
+	NAPI_FATAL("dispatchLog", napi_get_global(env, &global))
 
 	std::lock_guard<std::mutex> lock(winreglib::logLock);
 
@@ -199,9 +209,9 @@ static void dispatchLog(uv_async_t* handle) {
 
 		// we have to create an async context to prevent domain.enter error
 		napi_value resName;
-		napi_create_string_utf8(env, "winreglib.log", NAPI_AUTO_LENGTH, &resName);
+		NAPI_FATAL("dispatchLog", napi_create_string_utf8(env, "winreglib.log", NAPI_AUTO_LENGTH, &resName))
 		napi_async_context ctx;
-		napi_async_init(env, NULL, resName, &ctx);
+		NAPI_FATAL("dispatchLog", napi_async_init(env, NULL, resName, &ctx))
 
 		// emit the log message
 		napi_status status = napi_make_callback(env, ctx, global, logFn, 2, argv, &rval);
@@ -217,15 +227,6 @@ static void dispatchLog(uv_async_t* handle) {
  * winreglib banner.
  */
 NAPI_METHOD(init) {
-	const napi_node_version* ver;
-	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
-	if (ver->major < 10 || (ver->major == 10 && ver->minor < 2)) {
-		char errorMsg[128];
-		snprintf(errorMsg, 128, "winreglib requires Node.js 10.2.0 or newer (currently %d.%d.%d)", ver->major, ver->minor, ver->patch);
-		napi_fatal_error(NULL, 0, errorMsg, strlen(errorMsg));
-		return NULL;
-	}
-
 	NAPI_ARGV(1);
 	napi_value logFn = argv[0];
 
@@ -242,10 +243,12 @@ NAPI_METHOD(init) {
 	// print the banner
 	napi_value global, result, args[2];
 	uint32_t apiVersion;
+	char banner[128];
+	const napi_node_version* ver;
 	NAPI_STATUS_THROWS(napi_get_global(env, &global))
 	NAPI_STATUS_THROWS(napi_get_null(env, &args[0]))
 	NAPI_STATUS_THROWS(napi_get_version(env, &apiVersion))
-	char banner[128];
+	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
 	snprintf(banner, 128, "v" WINREGLIB_VERSION " <" WINREGLIB_URL "> (%s %d.%d.%d/n-api %d)", ver->release, ver->major, ver->minor, ver->patch, apiVersion);
 	NAPI_STATUS_THROWS(napi_create_string_utf8(env, banner, strlen(banner), &args[1]))
 	NAPI_STATUS_THROWS(napi_call_function(env, global, logFn, 2, args, &result))

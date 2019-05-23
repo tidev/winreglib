@@ -4,7 +4,10 @@ A library for querying the Windows Registry.
 
 ## Prerequisites
 
-`winreglib` requires Node.js v10.2.0 or newer.
+`winreglib` requires N-API version 3 and the following Node.js versions:
+
+* v8.12.0 or newer
+* v10.2.0 or newer
 
 ## Installation
 

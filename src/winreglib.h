@@ -106,7 +106,7 @@ namespace winreglib {
 			::napi_get_last_error_info(env, &error); \
 			\
 			char msg[1024]; \
-			::snprintf(msg, 1024, ns ": %s (status=%d)", error->error_message, _status); \
+			::snprintf(msg, 1024, ns ": " #code " failed (status=%d) %s", _status, error->error_message); \
 			\
 			napi_value fatal; \
 			if (::napi_create_string_utf8(env, msg, strlen(msg), &fatal) == napi_ok) { \
