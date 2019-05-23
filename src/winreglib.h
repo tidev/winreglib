@@ -18,12 +18,10 @@ namespace winreglib {
 	};
 }
 
-#define WINREGLIB_VERSION "1.0.0"
-
 #define WINREGLIB_URL "https://github.com/appcelerator/winreglib"
 
 // enable the following line to bypass the message queue and print the raw debug log messages to stdout
-#define ENABLE_RAW_DEBUGGING 0
+#define ENABLE_RAW_DEBUGGING 1
 
 #define TRIM_EXTRA_LINES(str) \
 	{ \
@@ -165,9 +163,15 @@ namespace winreglib {
 	}
 
 #if ENABLE_RAW_DEBUGGING == 1
-	#define LOG_DEBUG_RAW(ns, wstring) ::wprintf(L"%hs: %s\n", ns, wstring.c_str());
+	#define LOG_DEBUG_RAW(ns, wstring) \
+		::wprintf(L"%hs: %s\n", ns, wstring.c_str());
 #else
-	#define LOG_DEBUG_RAW(ns, wstring)
+	#define LOG_DEBUG_RAW(ns, wstring) \
+		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
+		std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
+		std::lock_guard<std::mutex> lock(winreglib::logLock); \
+		winreglib::logQueue.push(obj); \
+		::uv_async_send(&winreglib::logNotify);
 #endif
 
 #define LOG_DEBUG_VARS \
@@ -184,11 +188,6 @@ namespace winreglib {
 	{ \
 		std::wstring wbuffer(msg); \
 		LOG_DEBUG_RAW(ns, wbuffer) \
-		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
-		std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
-		std::lock_guard<std::mutex> lock(winreglib::logLock); \
-		winreglib::logQueue.push(obj); \
-		::uv_async_send(&winreglib::logNotify); \
 	}
 
 #define LOG_DEBUG_FORMAT(ns, code) \

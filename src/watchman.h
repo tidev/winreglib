@@ -29,6 +29,7 @@ public:
 
 private:
 	void dispatch();
+	void printTree();
 	void run();
 
 	napi_env env;

@@ -108,10 +108,18 @@ the key.
 ```js
 const handle = winreglib.watch('HKLM\\SOFTWARE');
 handle.on('change', evt => {
-	console.log(`Got change! ${evt.key}`);
+	console.log(`Got change! type=${evt.type} key=${evt.key}`);
 	handle.stop();
 });
 ```
+
+The change event object contains a change `type` and the affected `key`.
+
+| Event Type | Description                        |
+| ---------- | ---------------------------------- |
+| add        | The `key` was added.               |
+| change     | A subkey or value was added, changed, deleted, or permissions modified, but we don't know exactly what. |
+| delete     | The `key` was deleted.             |
 
 `watch()` can track keys that do not exist and should they be created, a change event will be
 emitted. You can watch the same key multiple times, however each returned handle is unique and you

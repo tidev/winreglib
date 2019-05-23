@@ -1,25 +1,26 @@
 {
-	'variables': {
-	},
 	'conditions': [
 		['OS=="win"', {
 			'targets': [
 				{
 					'target_name': 'node_winreglib',
-					"include_dirs"  : [
-						"<!(node -e \"require('napi-macros')\")"
+					'include_dirs'  : [
+						'<!(node -e "require(\'napi-macros\')")'
+					],
+					'defines': [
+						"WINREGLIB_VERSION=\"<!(node -e \"console.log(require(\'./package.json\').version)\")\""
 					],
 					'sources': [
 						'src/watchman.cpp',
 						'src/winreglib.cpp'
 					],
-					"msvs_settings": {
-                        "VCCLCompilerTool": {
-                            "RuntimeTypeInfo": "false",
-                            "EnableFunctionLevelLinking": "true",
-                            "ExceptionHandling": "2"
-                        }
-                    }
+					'msvs_settings': {
+						'VCCLCompilerTool': {
+							'RuntimeTypeInfo': 'false',
+							'EnableFunctionLevelLinking': 'true',
+							'ExceptionHandling': '2'
+						}
+					}
 				}
 			]
 		}]

@@ -139,33 +139,19 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 		::SetEvent(refresh);
 	}
 
-	// print the node tree for debugging
-	std::wstring str;
-	root->print(str);
-	str.resize(str.length() - 1);
-	LOG_DEBUG("Watchman::config", str.c_str())
+	printTree();
 }
 
 /**
- * Emits debug log messages. This function is invoked by libuv on the main thread when a new log
- * message has arrived.
+ * Emits registry change events. This function is invoked by libuv on the main thread when a change
+ * notification is sent from the background thread.
  */
 void Watchman::dispatch() {
 	LOG_DEBUG_THREAD_ID("Watchman::dispatch", L"Dispatching changes")
 
-	DWORD count = 0;
-	napi_handle_scope scope;
-	napi_value global, key, argv[2], listener, rval;
-
-	// initialize the scope and variables that won't change
-	NAPI_FATAL("Watchman::dispatch", ::napi_open_handle_scope(env, &scope))
-	NAPI_FATAL("Watchman::dispatch", ::napi_get_global(env, &global))
-	NAPI_FATAL("Watchman::dispatch", ::napi_create_string_utf8(env, "change", NAPI_AUTO_LENGTH, &argv[0]))
-	NAPI_FATAL("Watchman::dispatch", ::napi_create_object(env, &argv[1]))
-
 	while (1) {
 		std::shared_ptr<WatchNode> node;
-		count = 0;
+		DWORD count = 0;
 
 		// check if there are any changed nodes left...
 		// the first time we loop, we know there's at least one
@@ -182,37 +168,22 @@ void Watchman::dispatch() {
 		}
 
 		LOG_DEBUG_2("Watchman::dispatch", L"Dispatching change event for \"%ls\" (%d pending)", node->name.c_str(), --count)
-
-		// construct the key
-		std::wstring wkey = node->name;
-		std::shared_ptr<WatchNode> tmp(node);
-		while (tmp = tmp->parent) {
-			wkey.insert(0, 1, '\\');
-			wkey.insert(0, tmp->name);
-		}
-		std::u16string u16key(wkey.begin(), wkey.end());
-
-		NAPI_FATAL("Watchman::dispatch", ::napi_create_string_utf16(env, u16key.c_str(), NAPI_AUTO_LENGTH, &key))
-		NAPI_FATAL("Watchman::dispatch", ::napi_set_named_property(env, argv[1], "key", key))
-
-		// make a copy of listeners since the original list can be modified when a previous
-		// listener callback has been called
-		std::list<napi_ref> listeners;
-		{
-			std::lock_guard<std::mutex> lock(node->listenersLock);
-			listeners = node->listeners;
+		if (node->onChange()) {
+			printTree();
 		}
 
-		// fire the listener callback
-		for (auto const& ref : listeners) {
-			NAPI_FATAL("Watchman::dispatch", ::napi_get_reference_value(env, ref, &listener))
-			if (listener != NULL) {
-				NAPI_FATAL("Watchman::dispatch", ::napi_make_callback(env, NULL, global, listener, 2, argv, &rval))
-			}
-		}
+		::uv_async_send(&notifyChange);
 	}
+}
 
-	NAPI_FATAL("Watchman::dispatch", ::napi_close_handle_scope(env, scope))
+/**
+ * Prints the watcher tree for debugging.
+ */
+void Watchman::printTree() {
+	std::wstring str;
+	root->print(str);
+	str.resize(str.length() - 1);
+	LOG_DEBUG("Watchman::printTree", str.c_str())
 }
 
 /**
@@ -285,7 +256,6 @@ void Watchman::run() {
 
 					if (auto node = activeCopy[idx].lock()) {
 						LOG_DEBUG_2("Watchman::run", L"Detected change \"%ls\" [%ld]", node->name.c_str(), idx)
-						node->watch();
 
 						{
 							std::lock_guard<std::mutex> lock(changedNodesLock);
