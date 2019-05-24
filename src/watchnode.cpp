@@ -166,7 +166,7 @@ bool WatchNode::onChange() {
 	NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(env, "change", NAPI_AUTO_LENGTH, &argv[0]), false)
 	NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_CREATE_OBJECT", ::napi_create_object(env, &argv[1]), false)
 
-	LOG_DEBUG_1("WatchNode::onChange", L"Calling %lld callbacks", pending.size())
+	LOG_DEBUG_1("WatchNode::onChange", L"Calling %ld callbacks", (uint32_t)pending.size())
 
 	while (!pending.empty()) {
 		auto cb = pending.front();
@@ -177,7 +177,7 @@ bool WatchNode::onChange() {
 		NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_SET_NAMED_PROPERTY", ::napi_set_named_property(env, argv[1], "type", type), false)
 		NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_SET_NAMED_PROPERTY", ::napi_set_named_property(env, argv[1], "key", key), false)
 
-		LOG_DEBUG_1("WatchNode::onChange", L"Calling %lld listeners", cb->listeners.size())
+		LOG_DEBUG_1("WatchNode::onChange", L"Calling %ld listeners", (uint32_t)cb->listeners.size())
 
 		for (auto const& ref : cb->listeners) {
 			NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_GET_REFERENCE_VALUE", ::napi_get_reference_value(env, ref, &listener), false)
@@ -233,7 +233,7 @@ void WatchNode::removeListener(napi_value listener) {
 			++it;
 		}
 	}
-	LOG_DEBUG_2("WatchNode::removeListener", L"Node \"%ls\" now has %lld listeners", name.c_str(), listeners.size())
+	LOG_DEBUG_2("WatchNode::removeListener", L"Node \"%ls\" now has %ld listeners", name.c_str(), (uint32_t)listeners.size())
 }
 
 /**

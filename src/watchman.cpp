@@ -124,7 +124,7 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 			node->parent->subkeys.erase(node->name);
 
 			node = node->parent;
-			LOG_DEBUG_2("Watchman::config", L"Parent \"%ls\" now has %lld subkeys", node->name.c_str(), node->subkeys.size())
+			LOG_DEBUG_2("Watchman::config", L"Parent \"%ls\" now has %ld subkeys", node->name.c_str(), (uint32_t)node->subkeys.size())
 		}
 	}
 
@@ -202,7 +202,7 @@ void Watchman::run() {
 	// changed based on the handle index
 	{
 		std::lock_guard<std::mutex> lock(activeLock);
-		LOG_DEBUG_1("Watchman::run", L"Populating active copy (count=%lld)", active.size())
+		LOG_DEBUG_1("Watchman::run", L"Populating active copy (count=%ld)", (uint32_t)active.size())
 		activeCopy = active;
 	}
 
@@ -245,7 +245,7 @@ void Watchman::run() {
 					// doing a refresh
 					{
 						std::lock_guard<std::mutex> lock(activeLock);
-						LOG_DEBUG_1("Watchman::run", L"Refreshing %lld handles", active.size())
+						LOG_DEBUG_1("Watchman::run", L"Refreshing %ld handles", (uint32_t)active.size())
 						activeCopy = active;
 					}
 				} else {
