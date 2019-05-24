@@ -18,7 +18,7 @@
 	],
 	"scripts": {
 		"install": "node-gyp-build",
-		"prebuild": "prebuildify --target=node@ --napi=true --strip",
+		"prebuild": "prebuildify --napi=true --strip",
 		"build": "node-gyp -j 16 build",
 		"build-debug": "node-gyp -j 16 build --debug",
 		"clean": "node-gyp clean",

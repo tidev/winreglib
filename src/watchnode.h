@@ -7,6 +7,7 @@
 #include <mutex>
 #include <queue>
 #include <sstream>
+#include <uv.h>
 
 namespace winreglib {
 

@@ -1,6 +1,5 @@
 #include "watchnode.h"
 #include "winreglib.h"
-#include <uv.h>
 
 using namespace winreglib;
 
