@@ -11,6 +11,7 @@
 						"WINREGLIB_VERSION=\"<!(node -e \"console.log(require(\'./package.json\').version)\")\""
 					],
 					'sources': [
+						'src/watchnode.cpp',
 						'src/watchman.cpp',
 						'src/winreglib.cpp'
 					],

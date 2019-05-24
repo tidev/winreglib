@@ -52,8 +52,8 @@ namespace winreglib {
  */
 NAPI_METHOD(get) {
 	NAPI_ARGV(2)
-	__NAPI_ARGV_WSTRING(key, 1024, 0)
-	__NAPI_ARGV_WSTRING(valueName, 256, 1)
+	NAPI_ARGV_WSTRING(key, 1024, 0)
+	NAPI_ARGV_WSTRING(valueName, 256, 1)
 
 	std::string::size_type p = key.find('\\');
 	if (p == std::string::npos) {
@@ -92,12 +92,12 @@ NAPI_METHOD(get) {
 			{
 				std::wstring data_wstr(reinterpret_cast<wchar_t*>(data));
 				std::u16string data_str16(data_wstr.begin(), data_wstr.end());
-				NAPI_STATUS_THROWS(napi_create_string_utf16(env, data_str16.c_str(), NAPI_AUTO_LENGTH, &rval))
+				NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_STRING", napi_create_string_utf16(env, data_str16.c_str(), NAPI_AUTO_LENGTH, &rval), NULL)
 				break;
 			}
 
 		case REG_DWORD: // same as REG_DWORD_LITTLE_ENDIAN
-			NAPI_STATUS_THROWS(napi_create_uint32(env, *((uint32_t*)data), &rval))
+			NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_UINT32", napi_create_uint32(env, *((uint32_t*)data), &rval), NULL)
 			break;
 
 		case REG_DWORD_BIG_ENDIAN:
@@ -107,23 +107,23 @@ NAPI_METHOD(get) {
 					((in & 0x0000FF00) << 8) |
 					((in & 0x00FF0000) >> 8) |
 					((in & 0xFF000000) >> 16);
-				NAPI_STATUS_THROWS(napi_create_uint32(env, out, &rval))
+				NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_UINT32", napi_create_uint32(env, out, &rval), NULL)
 				break;
 			}
 
 		case REG_QWORD: // same as REG_QWORD_LITTLE_ENDIAN
-			NAPI_STATUS_THROWS(napi_create_int64(env, *((uint64_t*)data), &rval))
+			NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_INT64", napi_create_int64(env, *((uint64_t*)data), &rval), NULL)
 			break;
 
 		case REG_BINARY:
 		case REG_FULL_RESOURCE_DESCRIPTOR:
 		case REG_RESOURCE_LIST:
 		case REG_RESOURCE_REQUIREMENTS_LIST:
-			NAPI_STATUS_THROWS(napi_create_buffer(env, dataSize, (void**)data, &rval))
+			NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_BUFFER", napi_create_buffer(env, dataSize, (void**)data, &rval), NULL)
 			break;
 
 		case REG_NONE:
-			NAPI_STATUS_THROWS(napi_get_null(env, &rval))
+			NAPI_THROW_RETURN("get", "ERR_NAPI_GET_NULL", napi_get_null(env, &rval), NULL)
 			break;
 
 		case REG_MULTI_SZ:
@@ -131,15 +131,8 @@ NAPI_METHOD(get) {
 				BYTE* ptr = data;
 				napi_value push;
 
-				if (napi_create_array(env, &rval) != napi_ok) {
-					napi_throw_error(env, NULL, "napi_create_array failed");
-					break;
-				}
-
-				if (napi_get_named_property(env, rval, "push", &push) != napi_ok) {
-					napi_throw_error(env, NULL, "napi_get_named_property failed");
-					break;
-				}
+				NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_ARRAY", napi_create_array(env, &rval), NULL)
+				NAPI_THROW_RETURN("get", "ERR_NAPI_GET_NAMED_PROPERTY", napi_get_named_property(env, rval, "push", &push), NULL)
 
 				while (*ptr) {
 					std::wstring data_wstr(reinterpret_cast<wchar_t*>(ptr));
@@ -149,21 +142,15 @@ NAPI_METHOD(get) {
 					}
 					std::u16string data_str16(data_wstr.begin(), data_wstr.end());
 					napi_value str;
-					if (napi_create_string_utf16(env, data_str16.c_str(), NAPI_AUTO_LENGTH, &str) != napi_ok) {
-						napi_throw_error(env, NULL, "napi_create_string_utf16 failed");
-						break;
-					}
-					if (napi_call_function(env, rval, push, 1, &str, NULL) != napi_ok) {
-						napi_throw_error(env, NULL, "napi_call_function failed");
-						break;
-					}
+					NAPI_THROW_RETURN("get", "ERR_NAPI_CREATE_STRING", napi_create_string_utf16(env, data_str16.c_str(), data_str16.length(), &str), NULL)
+					NAPI_THROW_RETURN("get", "ERR_NAPI_CALL_FUNCTION", napi_call_function(env, rval, push, 1, &str, NULL), NULL)
 					ptr += len + 1;
 				}
 			}
 			break;
 
 		default:
-			THROW_ERROR_1("ERR_WINREG_UNSUPPORTED_KEY_TYPE", L"Unsupported key type: %d", keyType);
+			THROW_ERROR_1("ERR_WINREG_UNSUPPORTED_KEY_TYPE", L"Unsupported key type: %d", keyType)
 	}
 
 	delete[] data;
@@ -238,22 +225,22 @@ NAPI_METHOD(init) {
 	uv_unref((uv_handle_t*)&winreglib::logNotify);
 
 	// create the reference for the emit log callback so it doesn't get GC'd
-	NAPI_STATUS_THROWS(napi_create_reference(env, logFn, 1, &winreglib::logRef))
+	NAPI_THROW_RETURN("init", "ERR_NAPI_CREATE_REFERENCE", napi_create_reference(env, logFn, 1, &winreglib::logRef), NULL)
 
 	// print the banner
 	napi_value global, result, args[2];
 	uint32_t apiVersion;
 	char banner[128];
 	const napi_node_version* ver;
-	NAPI_STATUS_THROWS(napi_get_global(env, &global))
-	NAPI_STATUS_THROWS(napi_get_null(env, &args[0]))
-	NAPI_STATUS_THROWS(napi_get_version(env, &apiVersion))
-	NAPI_STATUS_THROWS(napi_get_node_version(env, &ver));
+	NAPI_THROW_RETURN("init", "ERR_NAPI_GET_GLOBAL", napi_get_global(env, &global), NULL)
+	NAPI_THROW_RETURN("init", "ERR_NAPI_GET_NULL", napi_get_null(env, &args[0]), NULL)
+	NAPI_THROW_RETURN("init", "ERR_NAPI_GET_VERSION", napi_get_version(env, &apiVersion), NULL)
+	NAPI_THROW_RETURN("init", "ERR_NAPI_GET_NODE_VERSION", napi_get_node_version(env, &ver), NULL)
 	snprintf(banner, 128, "v" WINREGLIB_VERSION " <" WINREGLIB_URL "> (%s %d.%d.%d/n-api %d)", ver->release, ver->major, ver->minor, ver->patch, apiVersion);
-	NAPI_STATUS_THROWS(napi_create_string_utf8(env, banner, strlen(banner), &args[1]))
-	NAPI_STATUS_THROWS(napi_call_function(env, global, logFn, 2, args, &result))
+	NAPI_THROW_RETURN("init", "ERR_NAPI_CREATE_STRING", napi_create_string_utf8(env, banner, strlen(banner), &args[1]), NULL)
+	NAPI_THROW_RETURN("init", "ERR_NAPI_CALL_FUNCTION", napi_call_function(env, global, logFn, 2, args, &result), NULL)
 
-	NAPI_RETURN_UNDEFINED
+	NAPI_RETURN_UNDEFINED("init")
 }
 
 /**
@@ -261,7 +248,7 @@ NAPI_METHOD(init) {
  */
 NAPI_METHOD(list) {
 	NAPI_ARGV(1);
-	__NAPI_ARGV_WSTRING(key, 1024, 0)
+	NAPI_ARGV_WSTRING(key, 1024, 0)
 
 	std::string::size_type p = key.find('\\');
 	if (p == std::string::npos) {
@@ -294,15 +281,15 @@ NAPI_METHOD(list) {
 	napi_value values;
 	napi_value valuesPush;
 
-	NAPI_STATUS_THROWS(napi_create_object(env, &rval))
-	NAPI_STATUS_THROWS(napi_create_array(env, &subkeys))
-	NAPI_STATUS_THROWS(napi_create_array(env, &values))
+	NAPI_THROW_RETURN("list", "ERR_NAPI_CREATE_OBJECT", napi_create_object(env, &rval), NULL)
+	NAPI_THROW_RETURN("list", "ERR_NAPI_CREATE_ARRAY", napi_create_array(env, &subkeys), NULL)
+	NAPI_THROW_RETURN("list", "ERR_NAPI_CREATE_ARRAY", napi_create_array(env, &values), NULL)
 	SET_PROP_FROM_WSTRING(rval, "resolvedRoot", resolvedRoot)
 	SET_PROP_FROM_WSTRING(rval, "key", &key)
-	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "subkeys", subkeys))
-	NAPI_STATUS_THROWS(napi_set_named_property(env, rval, "values", values))
-	NAPI_STATUS_THROWS(napi_get_named_property(env, subkeys, "push", &subkeysPush))
-	NAPI_STATUS_THROWS(napi_get_named_property(env, values, "push", &valuesPush))
+	NAPI_THROW_RETURN("list", "ERR_NAPI_SET_NAMED_PROPERTY", napi_set_named_property(env, rval, "subkeys", subkeys), NULL)
+	NAPI_THROW_RETURN("list", "ERR_NAPI_SET_NAMED_PROPERTY", napi_set_named_property(env, rval, "values", values), NULL)
+	NAPI_THROW_RETURN("list", "ERR_NAPI_GET_NAMED_PROPERTY", napi_get_named_property(env, subkeys, "push", &subkeysPush), NULL)
+	NAPI_THROW_RETURN("list", "ERR_NAPI_GET_NAMED_PROPERTY", napi_get_named_property(env, values, "push", &valuesPush), NULL)
 
 	DWORD numSubkeys = 0;
 	DWORD maxSubkeyLength = 0;
@@ -343,7 +330,7 @@ NAPI_METHOD(list) {
  */
 napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAction action) {
 	NAPI_ARGV(2);
-	__NAPI_ARGV_WSTRING(key, 1024, 0)
+	NAPI_ARGV_WSTRING(key, 1024, 0)
 	napi_value listener = argv[1];
 
 	std::string::size_type p = key.find('\\');
@@ -369,7 +356,7 @@ napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAc
 
 	winreglib::watchman->config(key, listener, action);
 
-	NAPI_RETURN_UNDEFINED
+	NAPI_RETURN_UNDEFINED(ns)
 }
 
 /**
@@ -393,11 +380,14 @@ void cleanup(void* arg) {
 	napi_env env = (napi_env)arg;
 
 	if (winreglib::watchman) {
+		LOG_DEBUG("cleanup", L"Deleting watchman")
 		delete winreglib::watchman;
 		winreglib::watchman = NULL;
 	}
 
-	// uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
+#ifdef ENABLE_RAW_DEBUGGING
+	uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
+#endif
 
 	if (winreglib::logRef) {
 		napi_delete_reference(env, winreglib::logRef);
@@ -415,7 +405,7 @@ NAPI_INIT() {
 	NAPI_EXPORT_FUNCTION(watch);
 	NAPI_EXPORT_FUNCTION(unwatch);
 
-	NAPI_STATUS_THROWS(napi_add_env_cleanup_hook(env, cleanup, env));
+	NAPI_THROW("init", "ERR_NAPI_ADD_ENV_CLEANUP_HOOK", napi_add_env_cleanup_hook(env, cleanup, env))
 
 	winreglib::watchman = new winreglib::Watchman(env);
 }

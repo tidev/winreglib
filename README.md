@@ -1,6 +1,6 @@
 # Windows Registry Utility Library
 
-A library for querying the Windows Registry.
+A library for querying and watching the Windows Registry.
 
 ## Prerequisites
 
@@ -45,8 +45,10 @@ for (const valueName of results.values) {
 
 Get a value for the given key and value name.
 
- * `key` (String) - The key beginning with the root.
- * `valueName` (String) - The name of the value to get.
+| Argument    | Type   | Description                      |
+| ----------- | ------ | -------------------------------- |
+| `key`       | String | The key beginning with the root. |
+| `valueName` | String | The name of the value to get.    |
 
 Returns a `String`, `Number`, `Buffer`, `Array.<String>`, or `null` depending on the value.
 
@@ -66,9 +68,11 @@ C:\Program Files
 
 Retreives all subkeys and value names for a give key.
 
- * `key` (String) - The key beginning with the root.
+| Argument | Type   | Description                      |
+| -------- | ------ | -------------------------------- |
+| `key`    | String | The key beginning with the root. |
 
-Returns an object with the resolved `resolvedRoot` (String), `key` (String), `subkeys`
+Returns an `Object` with the resolved `resolvedRoot` (String), `key` (String), `subkeys`
 (Array[String]), and `values` (Array[String]).
 
 If `key` is not found, an `Error` is thrown.
@@ -100,9 +104,11 @@ console.log(result);
 
 Watches a key for changes in subkeys or values.
 
- * `key` (String) - The key beginning with the root.
+| Argument | Type   | Description                      |
+| -------- | ------ | -------------------------------- |
+| `key`    | String | The key beginning with the root. |
 
-Returns a `handle` (EventEmitter) that emits `change` events. Call `handle.stop()` to stop watching
+Returns a handle (`EventEmitter`) that emits `"change"` events. Call `handle.stop()` to stop watching
 the key.
 
 ```js
@@ -113,17 +119,23 @@ handle.on('change', evt => {
 });
 ```
 
-The change event object contains a change `type` and the affected `key`.
+The `"change"` event object contains a change `"type"` and the affected `"key"`.
 
 | Event Type | Description                        |
 | ---------- | ---------------------------------- |
-| add        | The `key` was added.               |
-| change     | A subkey or value was added, changed, deleted, or permissions modified, but we don't know exactly what. |
-| delete     | The `key` was deleted.             |
+| `add`      | The `key` was added.               |
+| `change`   | A subkey or value was added, changed, deleted, or permissions modified, but we don't know exactly what. |
+| `delete`   | The `key` was deleted.             |
 
-`watch()` can track keys that do not exist and should they be created, a change event will be
+`watch()` can track keys that do not exist and when they are created, a change event will be
 emitted. You can watch the same key multiple times, however each returned handle is unique and you
 must call `handle.stop()` for each.
+
+Due to limitations of the Win32 API, `watch()` is unable to determine what actually changed during
+a `change` event type. You will need to call `list()` and cache the subkeys and values, then call
+`list()` again when a change is emitted and compare the before and after.
+
+Note that `watch()` does not support recursively watching for changes.
 
 ## Advanced
 

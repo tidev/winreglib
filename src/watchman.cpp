@@ -5,6 +5,14 @@
 
 using namespace winreglib;
 
+void execute(napi_env env, void* data) {
+	((Watchman*)data)->run();
+}
+
+void complete(napi_env env, napi_status status, void* data) {
+	LOG_DEBUG("Watchman::complete", L"Worker thread exited")
+}
+
 /**
  * Creates the default signal events, initializes the subkeys in the watcher tree, initializes the
  * background thread, and wires up the notification callback when a registry change occurs.
@@ -22,17 +30,9 @@ Watchman::Watchman(napi_env env) : env(env) {
 
 	// initialize the background thread that waits for win32 events
 	LOG_DEBUG_THREAD_ID("Watchman", L"Initializing async work")
-	napi_value asyncWorkName;
-	NAPI_STATUS_THROWS(::napi_create_string_utf8(env, "winreglib.runloop", NAPI_AUTO_LENGTH, &asyncWorkName));
-	NAPI_STATUS_THROWS(::napi_create_async_work(
-		env,
-		NULL,
-		asyncWorkName,
-		[](napi_env env, void* data) { ((Watchman*)data)->run(); },
-		[](napi_env env, napi_status status, void* data) { LOG_DEBUG("Watchman::complete", L"Worker thread exited") },
-		this,
-		&asyncWork
-	));
+	napi_value name;
+	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(env, "winreglib.runloop", NAPI_AUTO_LENGTH, &name));
+	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_ASYNC_WORK", ::napi_create_async_work(env, NULL, name, execute, complete, this, &asyncWork));
 
 	// wire up our dispatch change handler into Node's event loop, then unref it so that we don't
 	// block Node from exiting
@@ -130,7 +130,7 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 
 	if (beforeCount == 0 && afterCount > 0) {
 		LOG_DEBUG_THREAD_ID("Watchman::config", L"Starting background thread")
-		NAPI_STATUS_THROWS(::napi_queue_async_work(env, asyncWork))
+		NAPI_THROW("Watchman::config", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
 	} else if (beforeCount > 0 && afterCount == 0) {
 		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling term event")
 		::SetEvent(term);
@@ -171,8 +171,6 @@ void Watchman::dispatch() {
 		if (node->onChange()) {
 			printTree();
 		}
-
-		::uv_async_send(&notifyChange);
 	}
 }
 
@@ -180,10 +178,12 @@ void Watchman::dispatch() {
  * Prints the watcher tree for debugging.
  */
 void Watchman::printTree() {
-	std::wstring str;
-	root->print(str);
-	str.resize(str.length() - 1);
-	LOG_DEBUG("Watchman::printTree", str.c_str())
+	std::wstringstream wss(L"");
+	std::wstring line;
+	root->print(wss);
+	while (std::getline(wss, line, L'\n')) {
+		WLOG_DEBUG("Watchman::printTree", line)
+	}
 }
 
 /**

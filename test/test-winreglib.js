@@ -246,12 +246,18 @@ describe('watch()', () => {
 						expect(evt).to.be.an('object');
 						switch (counter++) {
 							case 0:
-								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
 								reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f');
 								break;
 
 							case 1:
-								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
 								resolve();
 								break;
 						}
@@ -288,12 +294,18 @@ describe('watch()', () => {
 						expect(evt).to.be.an('object');
 						switch (counter++) {
 							case 0:
-								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
 								reg('delete', 'HKCU\\Software\\winreglib', '/f', '/v', 'foo');
 								break;
 
 							case 1:
-								expect(evt.key).to.equal('HKEY_CURRENT_USER\\SOFTWARE\\winreglib');
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
 								resolve();
 								break;
 						}
@@ -310,7 +322,7 @@ describe('watch()', () => {
 		}
 	});
 
-	it.only('should watch a key that does not exist', async function () {
+	it('should watch a key that does not exist', async function () {
 		this.timeout(15000);
 		this.slow(14000);
 
@@ -324,7 +336,7 @@ describe('watch()', () => {
 
 			await new Promise((resolve, reject) => {
 				handle.on('change', evt => {
-					console.log('CHANGE!!', counter, evt);
+					// console.log('CHANGE!!', counter, evt);
 					try {
 						expect(evt).to.be.an('object');
 						switch (counter++) {
@@ -461,9 +473,40 @@ describe('watch()', () => {
 		this.slow(14000);
 
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
-		reg('add', 'HKCU\\Software\\winreglib');
+		reg('add', 'HKCU\\Software\\winreglib\\foo');
 
-		// TODO
+		const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo');
+
+		try {
+			let counter = 0;
+
+			await new Promise((resolve, reject) => {
+				handle.on('change', evt => {
+					// console.log('CHANGE!', evt);
+					try {
+						expect(evt).to.be.an('object');
+						switch (counter++) {
+							case 0:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+								});
+								resolve();
+								break;
+						}
+					} catch (e) {
+						reject(e);
+					}
+				});
+
+				setTimeout(() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'), 500);
+			});
+			handle.stop();
+		} finally {
+			// also test stop() being called twice
+			handle.stop();
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		}
 	});
 
 	it('should watch a key whose parent gets deleted', async function () {
@@ -471,8 +514,201 @@ describe('watch()', () => {
 		this.slow(14000);
 
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz');
+
+		const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo\\bar\\baz');
+
+		try {
+			let counter = 0;
+
+			await new Promise((resolve, reject) => {
+				handle.on('change', evt => {
+					// console.log('CHANGE!', evt);
+					try {
+						expect(evt).to.be.an('object');
+						switch (counter++) {
+							case 0:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+								});
+								resolve();
+								break;
+						}
+					} catch (e) {
+						reject(e);
+					}
+				});
+
+				setTimeout(() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'), 500);
+			});
+			handle.stop();
+		} finally {
+			// also test stop() being called twice
+			handle.stop();
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		}
+	});
+
+	it('should survive the gauntlet', async function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib');
 
-		// TODO
+		const winreglibHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib');
+		const fooHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo');
+		const barHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo\\bar');
+		const bazHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo\\bar\\baz');
+
+		try {
+			let counter = 0;
+
+			await new Promise((resolve, reject) => {
+				const fn = evt => {
+					// console.log('CHANGE!', evt);
+					try {
+						expect(evt).to.be.an('object');
+						switch (counter++) {
+							case 0:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
+								break;
+
+							case 1:
+								expect(evt).to.deep.equal({
+									type: 'add',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+								});
+								break;
+
+							case 2:
+								expect(evt).to.deep.equal({
+									type: 'add',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								reg('delete', 'HKCU\\Software\\winreglib\\foo\\bar', '/f');
+								break;
+
+							case 3:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+								});
+								break;
+
+							case 4:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								reg('add', 'HKCU\\Software\\winreglib', '/v', 'foo', '/t', 'REG_SZ', '/d', 'bar');
+								break;
+
+							case 5:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
+								reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\wiz');
+								break;
+
+							case 6:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+								});
+								break;
+
+							case 7:
+								expect(evt).to.deep.equal({
+									type: 'add',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz');
+								break;
+
+							case 8:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								break;
+
+							case 9:
+								expect(evt).to.deep.equal({
+									type: 'add',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+								});
+								reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz', '/v', 'foo', '/t', 'REG_SZ', '/d', 'bar');
+								break;
+
+							case 10:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+								});
+								reg('delete', 'HKCU\\Software\\winreglib', '/f', '/v', 'foo');
+								break;
+
+							case 11:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
+								reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f');
+								break;
+
+							case 12:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+								});
+								break;
+
+							case 13:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								break;
+
+							case 14:
+								expect(evt).to.deep.equal({
+									type: 'delete',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+								});
+								break;
+
+							case 15:
+								expect(evt).to.deep.equal({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+								});
+								resolve();
+								break;
+						}
+					} catch (e) {
+						reject(e);
+					}
+				};
+
+				winreglibHandle.on('change', fn);
+				fooHandle.on('change', fn);
+				barHandle.on('change', fn);
+				bazHandle.on('change', fn);
+
+				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo\\bar'), 500);
+			});
+		} finally {
+			winreglibHandle.stop();
+			fooHandle.stop();
+			barHandle.stop();
+			bazHandle.stop();
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		}
 	});
 });

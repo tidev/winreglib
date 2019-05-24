@@ -21,7 +21,7 @@ namespace winreglib {
 #define WINREGLIB_URL "https://github.com/appcelerator/winreglib"
 
 // enable the following line to bypass the message queue and print the raw debug log messages to stdout
-#define ENABLE_RAW_DEBUGGING 1
+// #define ENABLE_RAW_DEBUGGING
 
 #define TRIM_EXTRA_LINES(str) \
 	{ \
@@ -31,25 +31,47 @@ namespace winreglib {
 		} \
 	}
 
+#define NAPI_THROW_RETURN(ns, code, call, rval) \
+	{ \
+		napi_status _status = call; \
+		if (_status != napi_ok) { \
+			const napi_extended_error_info* error; \
+			::napi_get_last_error_info(env, &error); \
+			\
+			char msg[1024]; \
+			::snprintf(msg, 1024, "%s: " #call " failed (status=%d) %s", ns, _status, error->error_message); \
+			\
+			napi_value err, errCode, message; \
+			NAPI_STATUS_THROWS(::napi_create_string_utf8(env, code, NAPI_AUTO_LENGTH, &errCode)) \
+			NAPI_STATUS_THROWS(::napi_create_string_utf8(env, msg, ::strlen(msg), &message)) \
+			\
+			::napi_create_error(env, errCode, message, &err); \
+			::napi_throw(env, err); \
+			return rval; \
+		} \
+	}
+
+#define NAPI_THROW(ns, code, call) NAPI_THROW_RETURN(ns, code, call, )
+
 #define THROW_ERROR_PRE \
 	napi_value error; \
 	napi_value errCode; \
 	napi_value message;
 
-#define THROW_ERROR_POST(code, buffer) \
-	std::wstring wbuffer(buffer); \
+#define THROW_ERROR_POST(code, msg) \
+	std::wstring wbuffer(msg); \
 	std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
 	\
-	NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, ::strlen(code) + 1, &errCode)); \
+	NAPI_STATUS_THROWS(napi_create_string_utf8(env, code, NAPI_AUTO_LENGTH, &errCode)); \
 	NAPI_STATUS_THROWS(napi_create_string_utf16(env, u16buffer.c_str(), u16buffer.length(), &message)); \
 	\
 	napi_create_error(env, errCode, message, &error); \
-	napi_throw(env, error); \
+	napi_throw(env, error);
 
-#define THROW_ERROR(code, buffer) \
+#define THROW_ERROR(code, msg) \
 	{ \
 		THROW_ERROR_PRE \
-		THROW_ERROR_POST(code, buffer) \
+		THROW_ERROR_POST(code, msg) \
 	}
 
 #define THROW_ERROR_1(code, msg, arg1) \
@@ -68,7 +90,7 @@ namespace winreglib {
 		THROW_ERROR_POST(code, buffer) \
 	}
 
-#define __NAPI_ARGV_U16CHAR(name, size, i) \
+#define NAPI_ARGV_U16CHAR(name, size, i) \
 	char16_t name[size]; \
 	size_t name##_len; \
 	if (napi_get_value_string_utf16(env, argv[i], (char16_t*)&name, size, &name##_len) != napi_ok) { \
@@ -76,18 +98,18 @@ namespace winreglib {
 		return NULL; \
 	}
 
-#define __NAPI_ARGV_U16STRING(name, size, i) \
-	__NAPI_ARGV_U16CHAR(name##_char16, size, i) \
+#define NAPI_ARGV_U16STRING(name, size, i) \
+	NAPI_ARGV_U16CHAR(name##_char16, size, i) \
 	std::u16string name(name##_char16);
 
-#define __NAPI_ARGV_WSTRING(name, size, i) \
-	__NAPI_ARGV_U16STRING(name##_str16, size, i) \
+#define NAPI_ARGV_WSTRING(name, size, i) \
+	NAPI_ARGV_U16STRING(name##_str16, size, i) \
 	std::wstring name(name##_str16.begin(), name##_str16.end());
 
-#define NAPI_RETURN_UNDEFINED \
+#define NAPI_RETURN_UNDEFINED(ns) \
 	{ \
 		napi_value undef; \
-		NAPI_STATUS_THROWS(napi_get_undefined(env, &undef)); \
+		NAPI_THROW_RETURN(ns, "ERR_NAPI_GET_UNDEFINED", ::napi_get_undefined(env, &undef), NULL) \
 		return undef; \
 	}
 
@@ -162,18 +184,6 @@ namespace winreglib {
 		NAPI_STATUS_THROWS(napi_set_named_property(env, obj, prop, value)) \
 	}
 
-#if ENABLE_RAW_DEBUGGING == 1
-	#define LOG_DEBUG_RAW(ns, wstring) \
-		::wprintf(L"%hs: %s\n", ns, wstring.c_str());
-#else
-	#define LOG_DEBUG_RAW(ns, wstring) \
-		std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
-		std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
-		std::lock_guard<std::mutex> lock(winreglib::logLock); \
-		winreglib::logQueue.push(obj); \
-		::uv_async_send(&winreglib::logNotify);
-#endif
-
 #define LOG_DEBUG_VARS \
 	std::mutex logLock; \
 	uv_async_t logNotify; \
@@ -184,11 +194,35 @@ namespace winreglib {
 	extern uv_async_t logNotify; \
 	extern std::queue<std::shared_ptr<winreglib::LogMessage>> logQueue;
 
-#define LOG_DEBUG(ns, msg) \
-	{ \
-		std::wstring wbuffer(msg); \
-		LOG_DEBUG_RAW(ns, wbuffer) \
-	}
+#ifdef ENABLE_RAW_DEBUGGING
+	#define LOG_DEBUG(ns, msg) \
+		{ \
+			std::wstring wbuffer(msg); \
+			::wprintf(L"%hs: %s\n", ns, wbuffer.c_str()); \
+		}
+
+	#define WLOG_DEBUG(ns, wmsg) \
+		::wprintf(L"%hs: %s\n", ns, wmsg.c_str());
+#else
+	#define LOG_DEBUG(ns, msg) \
+		{ \
+			std::wstring wbuffer(msg); \
+			std::u16string u16buffer(wbuffer.begin(), wbuffer.end()); \
+			std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
+			std::lock_guard<std::mutex> lock(winreglib::logLock); \
+			winreglib::logQueue.push(obj); \
+			::uv_async_send(&winreglib::logNotify); \
+		}
+
+	#define WLOG_DEBUG(ns, wmsg) \
+		{ \
+			std::u16string u16buffer(wmsg.begin(), wmsg.end()); \
+			std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
+			std::lock_guard<std::mutex> lock(winreglib::logLock); \
+			winreglib::logQueue.push(obj); \
+			::uv_async_send(&winreglib::logNotify); \
+		}
+#endif
 
 #define LOG_DEBUG_FORMAT(ns, code) \
 	{ \

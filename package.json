@@ -17,7 +17,7 @@
 		"microsoft"
 	],
 	"scripts": {
-		"install": "node ./bin/run.js node-gyp-build",
+		"install": "node-gyp-build",
 		"prebuild": "prebuildify --target=node@ --napi=true --strip",
 		"build": "node-gyp -j 16 build",
 		"build-debug": "node-gyp -j 16 build --debug",

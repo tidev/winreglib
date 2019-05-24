@@ -26,11 +26,11 @@ public:
 	~Watchman();
 
 	void config(const std::wstring& key, napi_value listener, WatchAction action);
+	void run();
 
 private:
 	void dispatch();
 	void printTree();
-	void run();
 
 	napi_env env;
 	napi_async_work asyncWork;
