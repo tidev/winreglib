@@ -24,6 +24,13 @@
 					}
 				}
 			]
+		}, {
+			'targets': [
+				{
+					'target_name': 'node_winreglib',
+					'type': 'none'
+				}
+			]
 		}]
 	]
 }
