@@ -20,7 +20,7 @@ A library for querying and watching the Windows Registry.
 Currently `winreglib` only supports read operations. It can support write operations someday if
 need and time exists.
 
-## API
+## Example
 
 ```js
 import winreglib from 'winreglib';
@@ -40,6 +40,8 @@ for (const valueName of results.values) {
 	console.log(`    ${valueName} = ${winreglib.get(key, valueName)}`);
 }
 ```
+
+## API
 
 ### `get(key, valueName)`
 
