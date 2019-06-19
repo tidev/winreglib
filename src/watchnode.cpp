@@ -182,7 +182,7 @@ bool WatchNode::onChange() {
 		for (auto const& ref : cb->listeners) {
 			NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_GET_REFERENCE_VALUE", ::napi_get_reference_value(env, ref, &listener), false)
 			if (listener != NULL) {
-				NAPI_THROW_RETURN("WatchNode::onChange", "ERROR_NAPI_MAKE_CALLBACK", ::napi_make_callback(env, NULL, global, listener, 2, argv, &rval), false)
+				NAPI_THROW_RETURN("WatchNode::onChange", "ERR_NAPI_MAKE_CALLBACK", ::napi_make_callback(env, NULL, global, listener, 2, argv, &rval), false)
 			}
 		}
 	}
@@ -220,11 +220,11 @@ void WatchNode::print(std::wstringstream& wss, uint8_t indent) {
 void WatchNode::removeListener(napi_value listener) {
 	std::lock_guard<std::mutex> lock(listenersLock);
 	for (auto it = listeners.begin(); it != listeners.end(); ) {
-		napi_value listener;
-		NAPI_THROW("WatchNode::removeListener", "ERR_NAPI_GET_REFERENCE_VALUE", ::napi_get_reference_value(env, *it, &listener))
+		napi_value callback;
+		NAPI_THROW("WatchNode::removeListener", "ERR_NAPI_GET_REFERENCE_VALUE", ::napi_get_reference_value(env, *it, &callback))
 
 		bool same;
-		NAPI_THROW("WatchNode::removeListener", "ERR_NAPI_STRICT_EQUALS", ::napi_strict_equals(env, listener, listener, &same))
+		NAPI_THROW("WatchNode::removeListener", "ERR_NAPI_STRICT_EQUALS", ::napi_strict_equals(env, callback, listener, &same))
 
 		if (same) {
 			LOG_DEBUG_1("WatchNode::removeListener", L"Removing listener from \"%ls\"", name.c_str())

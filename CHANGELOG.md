@@ -1,3 +1,10 @@
+# v1.0.3
+
+ * fix: Fixed bug with removing a watch node listener would remove all listeners.
+ * fix: Fixed typo in error code value when watch node fails invoking listener.
+ * chore: Made all global functions static.
+ * chore: Misc code cleanup.
+
 # v1.0.2 (May 28, 2019)
 
  * fix: Added missing double quote in install script.

@@ -1,6 +1,9 @@
 #ifndef __WINREGLIB__
 #define __WINREGLIB__
 
+// enable the following line to bypass the message queue and print the raw debug log messages to stdout
+// #define ENABLE_RAW_DEBUGGING
+
 #define NAPI_VERSION 3
 
 #include <map>
@@ -17,11 +20,6 @@ namespace winreglib {
 		std::u16string msg;
 	};
 }
-
-#define WINREGLIB_URL "https://github.com/appcelerator/winreglib"
-
-// enable the following line to bypass the message queue and print the raw debug log messages to stdout
-// #define ENABLE_RAW_DEBUGGING
 
 #define TRIM_EXTRA_LINES(str) \
 	{ \
@@ -118,8 +116,8 @@ namespace winreglib {
 		napi_status _status = code; \
 		if (_status == napi_pending_exception) { \
 			napi_value fatal; \
-			napi_get_and_clear_last_exception(env, &fatal); \
-			napi_fatal_exception(env, fatal); \
+			::napi_get_and_clear_last_exception(env, &fatal); \
+			::napi_fatal_exception(env, fatal); \
 			return; \
 		} else if (_status != napi_ok) { \
 			const napi_extended_error_info* error; \
@@ -132,7 +130,7 @@ namespace winreglib {
 			if (::napi_create_string_utf8(env, msg, strlen(msg), &fatal) == napi_ok) { \
 				::napi_fatal_exception(env, fatal); \
 			} else { \
-				::fprintf(stderr, msg); \
+				::fprintf(stderr, "%s", msg); \
 			} \
 			return; \
 		} \

@@ -67,6 +67,7 @@ api.watch = function watch(key) {
 
 	const handle = new EventEmitter();
 	const emit = handle.emit.bind(handle);
+
 	binding.watch(key, emit);
 	handle.stop = function stop() {
 		binding.unwatch(key, emit);

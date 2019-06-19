@@ -207,6 +207,8 @@ static void dispatchLog(uv_async_t* handle) {
 
 		NAPI_FATAL("dispatchLog", status)
 	}
+
+	NAPI_FATAL("dispatchLog", napi_close_handle_scope(env, scope))
 }
 
 /**
@@ -376,7 +378,7 @@ NAPI_METHOD(unwatch) {
 /**
  * Destroys the Watchman instance and closes open handles.
  */
-void cleanup(void* arg) {
+static void cleanup(void* arg) {
 	napi_env env = (napi_env)arg;
 
 	if (winreglib::watchman) {
@@ -385,9 +387,7 @@ void cleanup(void* arg) {
 		winreglib::watchman = NULL;
 	}
 
-#ifdef ENABLE_RAW_DEBUGGING
 	uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
-#endif
 
 	if (winreglib::logRef) {
 		napi_delete_reference(env, winreglib::logRef);

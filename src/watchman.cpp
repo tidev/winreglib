@@ -5,11 +5,11 @@
 
 using namespace winreglib;
 
-void execute(napi_env env, void* data) {
+static void execute(napi_env env, void* data) {
 	((Watchman*)data)->run();
 }
 
-void complete(napi_env env, napi_status status, void* data) {
+static void complete(napi_env env, napi_status status, void* data) {
 	LOG_DEBUG("Watchman::complete", L"Worker thread exited")
 }
 
