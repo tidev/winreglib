@@ -1,6 +1,6 @@
 {
 	"name": "winreglib",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Windows Registry Utility Library",
 	"main": "./src/index",
 	"gypfile": true,
@@ -29,14 +29,14 @@
 		"test": "mocha -r chai test/**/test-*.js"
 	},
 	"dependencies": {
-		"napi-macros": "^1.8.2",
+		"napi-macros": "^2.0.0",
 		"node-gyp-build": "^4.1.0",
 		"snooplogg": "^2.0.1"
 	},
 	"devDependencies": {
 		"chai": "^4.2.0",
 		"mocha": "^6.1.4",
-		"prebuildify": "^3.0.0"
+		"prebuildify": "^3.0.1"
 	},
 	"homepage": "https://github.com/appcelerator/winreglib",
 	"bugs": "https://github.com/appcelerator/winreglib/issues",

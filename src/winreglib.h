@@ -29,7 +29,7 @@ namespace winreglib {
 		} \
 	}
 
-#define NAPI_THROW_RETURN(ns, code, call, rval) \
+#define NAPI_THROW_RETURN_CODE(ns, code, call, retCode) \
 	{ \
 		napi_status _status = call; \
 		if (_status != napi_ok) { \
@@ -40,16 +40,25 @@ namespace winreglib {
 			::snprintf(msg, 1024, "%s: " #call " failed (status=%d) %s", ns, _status, error->error_message); \
 			\
 			napi_value err, errCode, message; \
-			NAPI_STATUS_THROWS(::napi_create_string_utf8(env, code, NAPI_AUTO_LENGTH, &errCode)) \
-			NAPI_STATUS_THROWS(::napi_create_string_utf8(env, msg, ::strlen(msg), &message)) \
+			if (::napi_create_string_utf8(env, code, NAPI_AUTO_LENGTH, &errCode) != napi_ok) { \
+				napi_throw_error(env, NULL, "napi_create_string_utf8() failed!"); \
+				retCode; \
+			} \
+			if (::napi_create_string_utf8(env, msg, ::strlen(msg), &message) != napi_ok) { \
+				napi_throw_error(env, NULL, "napi_create_string_utf8() failed!"); \
+				retCode; \
+			} \
 			\
 			::napi_create_error(env, errCode, message, &err); \
 			::napi_throw(env, err); \
-			return rval; \
+			retCode; \
 		} \
 	}
 
-#define NAPI_THROW(ns, code, call) NAPI_THROW_RETURN(ns, code, call, )
+#define NAPI_THROW_RETURN(ns, code, call, rval) \
+	NAPI_THROW_RETURN_CODE(ns, code, call, return rval)
+
+#define NAPI_THROW(ns, code, call) NAPI_THROW_RETURN_CODE(ns, code, call, )
 
 #define THROW_ERROR_PRE \
 	napi_value error; \

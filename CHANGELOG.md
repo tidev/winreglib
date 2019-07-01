@@ -1,9 +1,10 @@
-# v1.0.3
+# v1.0.3 (Jul 1, 2019)
 
  * fix: Fixed bug with removing a watch node listener would remove all listeners.
  * fix: Fixed typo in error code value when watch node fails invoking listener.
  * chore: Made all global functions static.
  * chore: Misc code cleanup.
+ * chore: Updated dependencies.
 
 # v1.0.2 (May 28, 2019)
 
