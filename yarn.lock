@@ -79,10 +79,10 @@ browser-stdout@1.3.1:
   resolved "https://registry.yarnpkg.com/browser-stdout/-/browser-stdout-1.3.1.tgz#baa559ee14ced73452229bad7326467c61fabd60"
   integrity sha512-qhAVI1+Av2X7qelOfAIYwXONood6XlZE/fXaBSmW/T5SzLAmCgzi+eiWE7fUvbHaeNBQH13UftjpXxsfLkMpgw==
 
-bryt@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/bryt/-/bryt-1.0.0.tgz#fd883a1c496c95323bcd06164395705417b1239c"
-  integrity sha512-/nhjJl363E6mi4uNqY8AKnVPU7TAady2NEMADJ02vdcaog6YZGAQ/gNO6KXyujjSy1YNLSgc6ikU8nghD7J4hA==
+bryt@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/bryt/-/bryt-1.0.1.tgz#1f349604894e7858ecdc29b1439ca9019d9beb2b"
+  integrity sha512-8q5DgK7LK0NP1I5HTlAjcJzrFFPedJqhaqAU8pr1afG/LKbUwhmoLTbxL0Xd0hCEiofXyQn3CwlcmwF4MKEDdg==
   dependencies:
     brotli "^1.3.2"
 
@@ -126,7 +126,7 @@ chai@^4.2.0:
     pathval "^1.1.0"
     type-detect "^4.0.5"
 
-chalk@^2.0.1, chalk@^2.4.1:
+chalk@^2.0.1, chalk@^2.4.2:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-2.4.2.tgz#cd42541677a54333cf541a49108c1432b44c9424"
   integrity sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==
@@ -358,6 +358,11 @@ has-flag@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/has-flag/-/has-flag-3.0.0.tgz#b5d454dc2199ae225699f3467e5a07f3b955bafd"
   integrity sha1-tdRU3CGZriJWmfNGfloH87lVuv0=
+
+has-flag@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/has-flag/-/has-flag-4.0.0.tgz#944771fd9c81c81265c4d6941860da06bb59479b"
+  integrity sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==
 
 has-symbols@^1.0.0:
   version "1.0.0"
@@ -818,18 +823,18 @@ signal-exit@^3.0.0:
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.2.tgz#b5fdc08f1287ea1178628e415e25132b73646c6d"
   integrity sha1-tf3AjxKH6hF4Yo5BXiUTK3NkbG0=
 
-snooplogg@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/snooplogg/-/snooplogg-2.0.1.tgz#f8fd5bda1eef47e807c067d0a8d57e0514855805"
-  integrity sha512-F92r3ccDB4mnzZ3eFFPXDnG10iIj6eiShCiDmO4hQLNhV8rpOtUBl2VbGW1BKIOSDCXJuhFxj6yWtK6MCGa4rw==
+snooplogg@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/snooplogg/-/snooplogg-2.1.0.tgz#3ea78698b21222f0d2e8ca51c3084a3cc89efe6b"
+  integrity sha512-cRrUOZdQCxoDqMtV9u9ss1psSTdysXkLyRHWriFO7DqSQN2FbP2RGoLkyLiq2OJ+9+XxNVjdAl6F/5IuBsNZLw==
   dependencies:
-    bryt "^1.0.0"
-    chalk "^2.4.1"
+    bryt "^1.0.1"
+    chalk "^2.4.2"
     nanobuffer "^1.1.4"
-    source-map-support "^0.5.9"
-    supports-color "^5.5.0"
+    source-map-support "^0.5.12"
+    supports-color "^7.0.0"
 
-source-map-support@^0.5.9:
+source-map-support@^0.5.12, source-map-support@^0.5.9:
   version "0.5.12"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.12.tgz#b4f3b10d51857a5af0138d3ce8003b201613d599"
   integrity sha512-4h2Pbvyy15EE02G+JOZpUCmqWJuqrs+sEkzewTm++BPi7Hvn/HwcqLAcNxYAyI0x13CpPPn+kMjl+hplXMHITQ==
@@ -918,12 +923,19 @@ supports-color@6.0.0:
   dependencies:
     has-flag "^3.0.0"
 
-supports-color@^5.3.0, supports-color@^5.5.0:
+supports-color@^5.3.0:
   version "5.5.0"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-5.5.0.tgz#e2e69a44ac8772f78a1ec0b35b689df6530efc8f"
   integrity sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==
   dependencies:
     has-flag "^3.0.0"
+
+supports-color@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-7.0.0.tgz#f2392c50ab35bb3cae7beebf24d254a19f880c06"
+  integrity sha512-WRt32iTpYEZWYOpcetGm0NPeSvaebccx7hhS/5M6sAiqnhedtFCHFxkjzZlJvFNCPowiKSFGiZk5USQDFy83vQ==
+  dependencies:
+    has-flag "^4.0.0"
 
 tar-fs@^1.16.2:
   version "1.16.3"

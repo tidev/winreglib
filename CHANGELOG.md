@@ -1,3 +1,8 @@
+# v1.0.4 (Jul 12, 2019)
+
+ * fix: Removed `install` script that was forcing Visual Studio to be installed.
+ * chore: Updated dependencies.
+
 # v1.0.3 (Jul 1, 2019)
 
  * fix: Fixed bug with removing a watch node listener would remove all listeners.
