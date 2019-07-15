@@ -1,6 +1,6 @@
 {
 	"name": "winreglib",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Windows Registry Utility Library",
 	"main": "./src/index",
 	"gypfile": true,
@@ -17,6 +17,7 @@
 		"microsoft"
 	],
 	"scripts": {
+		"install": "node -e \"process.platform === 'win32' && require('node-gyp-build/bin.js')\"",
 		"prepublishOnly": "npm run prebuild && npm run prebuild-ia32",
 		"prebuild": "prebuildify --napi=true --strip",
 		"prebuild-ia32": "prebuildify --napi=true --strip --arch=ia32",
