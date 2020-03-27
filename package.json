@@ -26,7 +26,7 @@
 		"clean": "node-gyp clean",
 		"rebuild": "node-gyp -j 16 rebuild",
 		"rebuild-debug": "node-gyp -j 16 rebuild --debug",
-		"test": "set JUNIT_REPORT_PATH=junit.xml && mocha -r chai --reporter mocha-jenkins-reporter test/**/test-*.js"
+		"test": "set \"JUNIT_REPORT_PATH=junit.xml\" && mocha -r chai --reporter mocha-jenkins-reporter test/**/test-*.js"
 	},
 	"dependencies": {
 		"napi-macros": "^2.0.0",
