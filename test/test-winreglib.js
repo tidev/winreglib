@@ -126,9 +126,20 @@ describe('get()', () => {
 		expect(value.length).to.be.above(0);
 	});
 
-	it('should get none value', () => {
-		const value = winreglib.get('HKCR\\.mp3\\OpenWithProgids', 'mp3_auto_file');
-		expect(value).to.be.null;
+	it('should get none value', function () {
+		this.timeout(15000);
+		this.slow(14000);
+
+		try {
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+			reg('add', 'HKCU\\Software\\winreglib');
+			reg('add', 'HKCU\\Software\\winreglib', '/v', 'foo', '/t', 'REG_NONE');
+
+			const value = winreglib.get('HKCU\\Software\\winreglib', 'foo');
+			expect(value).to.be.null;
+		} finally {
+			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+		}
 	});
 });
 
