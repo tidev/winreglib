@@ -26,7 +26,7 @@
 		"clean": "node-gyp clean",
 		"rebuild": "node-gyp -j 16 rebuild",
 		"rebuild-debug": "node-gyp -j 16 rebuild --debug",
-		"test": "mocha -r chai test/**/test-*.js"
+		"test": "set JUNIT_REPORT_PATH=junit.xml&& mocha -r chai --reporter mocha-jenkins-reporter test/**/test-*.js"
 	},
 	"dependencies": {
 		"napi-macros": "^2.0.0",
@@ -36,6 +36,7 @@
 	"devDependencies": {
 		"chai": "^4.2.0",
 		"mocha": "^6.1.4",
+		"mocha-jenkins-reporter": "^0.4.2",
 		"prebuildify": "^3.0.1"
 	},
 	"homepage": "https://github.com/appcelerator/winreglib",
