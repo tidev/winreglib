@@ -1,3 +1,12 @@
+# v2.0.0 (Jun 5, 2020)
+
+ * BREAKING CHANGE: Drop support for Node 8.
+ * chore: Updated dependencies.
+
+# v1.0.5 (Jul 15, 2020)
+
+ * fix: Added back install script.
+
 # v1.0.4 (Jul 12, 2019)
 
  * fix: Removed `install` script that was forcing Visual Studio to be installed.

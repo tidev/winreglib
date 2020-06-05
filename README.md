@@ -6,7 +6,6 @@ A library for querying and watching the Windows Registry.
 
 `winreglib` requires N-API version 3 and the following Node.js versions:
 
-* v8.12.0 or newer
 * v10.2.0 or newer
 
 ## Installation
