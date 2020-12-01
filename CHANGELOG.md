@@ -1,3 +1,7 @@
+# v2.0.2 (Dec 1, 2020)
+
+ * chore: Updated dependencies.
+
 # v2.0.1 (Jun 10, 2020)
 
  * fix: Added `node-gyp` to fix install issues.
