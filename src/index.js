@@ -32,7 +32,7 @@ api.get = function get(key, value) {
 		throw new TypeError('Expected key to be a non-empty string');
 	}
 
-	if (!value || typeof value !== 'string') {
+	if (typeof value !== 'string') {
 		throw new TypeError('Expected value name to be a non-empty string');
 	}
 
