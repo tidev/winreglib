@@ -1,7 +1,7 @@
 name: Publish
 on:
   release:
-    types: [ created ]
+    types: [published]
 
 jobs:
   publish:
@@ -15,7 +15,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: 18
 
     - name: Install pnpm
       uses: pnpm/action-setup@v2
@@ -28,5 +28,8 @@ jobs:
     - name: Publish to npm
       env:
         GH_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ github.token }}
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      run: npm publish
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        RELEASE_TAG: ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      run: npm publish --tag $RELEASE_TAG
