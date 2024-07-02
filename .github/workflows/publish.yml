@@ -11,8 +11,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: Setup node
       uses: actions/setup-node@v2
@@ -20,9 +18,11 @@ jobs:
         node-version: '16'
         registry-url: 'https://registry.npmjs.org'
 
+    - name: Setup yarn
+      run: npm install -g yarn
+
     - name: Install dependencies
-      run: npm ci
-      if: steps.node-cache.outputs.cache-hit != 'true'
+      run: yarn
 
     - name: Publish to npm
       env:
