@@ -1,6 +1,6 @@
 {
 	"name": "winreglib",
-	"version": "2.0.3",
+	"version": "2.0.4",
 	"description": "Windows Registry Utility Library",
 	"main": "./src/index",
 	"gypfile": true,
