@@ -31,7 +31,7 @@
 	"dependencies": {
 		"napi-macros": "^2.0.0",
 		"node-gyp": "^10.1.0",
-		"node-gyp-build": "4.8.0",
+		"node-gyp-build": "4.8.1",
 		"snooplogg": "^3.0.1"
 	},
 	"devDependencies": {
@@ -48,5 +48,10 @@
 	},
 	"engines": {
 		"node": ">=10.2.0"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"node-gyp-build@4.8.1": "patches/node-gyp-build@4.8.1.patch"
+		}
 	}
 }
