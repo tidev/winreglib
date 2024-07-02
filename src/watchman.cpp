@@ -38,9 +38,10 @@ Watchman::Watchman(napi_env env) : env(env) {
 	// block Node from exiting
 	uv_loop_t* loop;
 	::napi_get_uv_event_loop(env, &loop);
-	notifyChange.data = this;
-	::uv_async_init(loop, &notifyChange, [](uv_async_t* handle) { ((Watchman*)handle->data)->dispatch(); });
-	::uv_unref((uv_handle_t*)&notifyChange);
+	notifyChange = new uv_async_t;
+	notifyChange->data = this;
+	::uv_async_init(loop, notifyChange, [](uv_async_t* handle) { if (handle && handle->data) ((Watchman*)handle->data)->dispatch(); });
+	::uv_unref((uv_handle_t*)notifyChange);
 }
 
 /**
@@ -51,7 +52,7 @@ Watchman::~Watchman() {
 	::napi_delete_async_work(env, asyncWork);
 	::CloseHandle(term);
 	::CloseHandle(refresh);
-	::uv_close((uv_handle_t*)&notifyChange, NULL);
+	::uv_close((uv_handle_t*)notifyChange, [](uv_handle_t* handle) { if (handle) delete (uv_async_t*)handle; });
 }
 
 /**
@@ -267,7 +268,7 @@ void Watchman::run() {
 							}
 						}
 
-						::uv_async_send(&notifyChange);
+						::uv_async_send(notifyChange);
 					}
 				}
 			}
