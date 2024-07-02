@@ -36,8 +36,8 @@ importers:
         specifier: ^0.4.5
         version: 0.4.8(mocha@8.4.0)
       prebuildify:
-        specifier: ^4.1.1
-        version: 4.2.1
+        specifier: ^6.0.1
+        version: 6.0.1
 
 packages:
 
@@ -259,9 +259,6 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
-
-  execspawn@1.0.1:
-    resolution: {integrity: sha512-s2k06Jy9i8CUkYe0+DxRlvtkZoOkwwfhB+Xxo5HGUtrISVW2m98jO2tr67DGRFxZwkjQqloA3v/tNtjhBRBieg==}
 
   exponential-backoff@3.1.1:
     resolution: {integrity: sha512-dX7e/LHVJ6W3DE1MHWi9S1EYzDESENfLrYohG2G++ovZrYOkm4Knwa0mc1cn84xJOR4KEU0WSchhLbd0UklbHw==}
@@ -527,8 +524,9 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
 
-  node-abi@2.30.1:
-    resolution: {integrity: sha512-/2D0wOQPgaUWzVSVgRMx+trKJRC2UG4SUc4oCJoXx9Uxjtp0Vy3/kt7zcbxHF8+Z/pK3UloLWzBISg72brfy1w==}
+  node-abi@3.65.0:
+    resolution: {integrity: sha512-ThjYBfoDNr08AWx6hGaRbfPwxKV9kVzAzOzlLKbk2CuqXE2xnCh+cbAGnwM3t8Lq4v9rUB7VfondlkBckcJrVA==}
+    engines: {node: '>=10'}
 
   node-gyp-build@4.8.1:
     resolution: {integrity: sha512-OSs33Z9yWr148JZcbZd5WiAXhh/n9z8TxQcdMhIOlpN9AhWpLfvVFO73+m77bBABQMaY9XSvIa+qk0jlI7Gcaw==}
@@ -593,8 +591,8 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
 
-  prebuildify@4.2.1:
-    resolution: {integrity: sha512-FFgf3jHbh404ZuM++Cr0nMhK/VIgpyzscEXXiZCX1gbQz1ktg0s4hFKr9nXQKDLA3De98BvqNZODfqvm0maA2w==}
+  prebuildify@6.0.1:
+    resolution: {integrity: sha512-8Y2oOOateom/s8dNBsGIcnm6AxPmLH4/nanQzL5lQMU+sC0CMhzARZHizwr36pUPLdvBnOkCNQzxg4djuFSgIw==}
     hasBin: true
 
   proc-log@3.0.0:
@@ -636,10 +634,6 @@ packages:
 
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
-
-  semver@5.7.2:
-    resolution: {integrity: sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g==}
-    hasBin: true
 
   semver@7.6.2:
     resolution: {integrity: sha512-FNAIBWCx9qcRhoHcgcJ0gvU7SN1lYU2ZXuSfl04bSC5OpvDHFyJCjdNHomPXxjQlCBU67YW64PzY7/VIEH7F2w==}
@@ -759,9 +753,6 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
-
-  util-extend@1.0.3:
-    resolution: {integrity: sha512-mLs5zAK+ctllYBj+iAQvlDCwoxU/WDOUaJkcFudeiAX6OajC6BKXJUa9a+tbtkC11dz2Ufb7h0lyvIOVn4LADA==}
 
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
@@ -1041,10 +1032,6 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
-  execspawn@1.0.1:
-    dependencies:
-      util-extend: 1.0.3
-
   exponential-backoff@3.1.1: {}
 
   fill-range@7.1.1:
@@ -1318,9 +1305,9 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  node-abi@2.30.1:
+  node-abi@3.65.0:
     dependencies:
-      semver: 5.7.2
+      semver: 7.6.2
 
   node-gyp-build@4.8.1(patch_hash=4v3havyznpg2abqwiszfjnuita): {}
 
@@ -1382,12 +1369,11 @@ snapshots:
 
   picomatch@2.3.1: {}
 
-  prebuildify@4.2.1:
+  prebuildify@6.0.1:
     dependencies:
-      execspawn: 1.0.1
       minimist: 1.2.8
       mkdirp-classic: 0.5.3
-      node-abi: 2.30.1
+      node-abi: 3.65.0
       npm-run-path: 3.1.0
       pump: 3.0.0
       tar-fs: 2.1.1
@@ -1428,8 +1414,6 @@ snapshots:
 
   safer-buffer@2.1.2:
     optional: true
-
-  semver@5.7.2: {}
 
   semver@7.6.2: {}
 
@@ -1563,8 +1547,6 @@ snapshots:
       imurmurhash: 0.1.4
 
   util-deprecate@1.0.2: {}
-
-  util-extend@1.0.3: {}
 
   which@2.0.2:
     dependencies:
