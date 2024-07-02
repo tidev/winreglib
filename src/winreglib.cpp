@@ -353,7 +353,7 @@ napi_value watchHelper(napi_env env, napi_callback_info info, winreglib::WatchAc
 	}
 	key = root + key.substr(p);
 
-	char* ns = action == winreglib::Watch ? "watch" : "unwatch";
+	const char* ns = action == winreglib::Watch ? "watch" : "unwatch";
 	LOG_DEBUG_1(ns, L"key=\"%ls\"", key.c_str())
 
 	winreglib::watchman->config(key, listener, action);

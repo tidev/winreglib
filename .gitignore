@@ -2,9 +2,14 @@
 .DS_Store*
 .nyc_output
 .vscode
+coverage
+dist
 /build
 /prebuilds
 junit.xml
 node_modules
 npm-debug.log
-yarn-error.log
+.pnpm-debug.log
+tmp
+*.tsbuildinfo
+*.tgz

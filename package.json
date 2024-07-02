@@ -1,52 +1,70 @@
 {
-	"name": "winreglib",
-	"version": "2.0.2",
-	"description": "Windows Registry Utility Library",
-	"main": "./src/index",
-	"gypfile": true,
-	"author": "Axway, Inc. <npmjs@appcelerator.com>",
-	"maintainers": [
-		"Chris Barber <cbarber@axway.com>"
-	],
-	"license": "Apache-2.0",
-	"keywords": [
-		"appcelerator",
-		"windows",
-		"windows registry",
-		"winreg",
-		"microsoft"
-	],
-	"scripts": {
-		"install": "node -e \"process.platform === 'win32' && require('node-gyp-build/bin.js')\"",
-		"prepublishOnly": "npm run prebuild && npm run prebuild-ia32",
-		"prebuild": "prebuildify --napi=true --strip",
-		"prebuild-ia32": "prebuildify --napi=true --strip --arch=ia32",
-		"build": "node-gyp -j 16 build",
-		"build-debug": "node-gyp -j 16 build --debug",
-		"clean": "node-gyp clean",
-		"rebuild": "node-gyp -j 16 rebuild",
-		"rebuild-debug": "node-gyp -j 16 rebuild --debug",
-		"test": "set JUNIT_REPORT_PATH=junit.xml&& mocha -r chai --reporter mocha-jenkins-reporter test/**/test-*.js"
-	},
-	"dependencies": {
-		"napi-macros": "^2.0.0",
-		"node-gyp": "^7.1.2",
-		"node-gyp-build": "^4.2.3",
-		"snooplogg": "^3.0.1"
-	},
-	"devDependencies": {
-		"chai": "^4.2.0",
-		"mocha": "^8.2.1",
-		"mocha-jenkins-reporter": "^0.4.5",
-		"prebuildify": "^4.1.1"
-	},
-	"homepage": "https://github.com/appcelerator/winreglib",
-	"bugs": "https://github.com/appcelerator/winreglib/issues",
-	"repository": {
-		"type": "git",
-		"url": "git://github.com/appcelerator/winreglib.git"
-	},
-	"engines": {
-		"node": ">=10.2.0"
-	}
+  "name": "winreglib",
+  "version": "4.0.0",
+  "description": "Windows Registry utility library",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.js",
+  "gypfile": true,
+  "author": "TiDev, Inc. <npm@tidev.io>",
+  "license": "Apache-2.0",
+  "keywords": ["windows", "windows registry", "winreg", "microsoft"],
+  "scripts": {
+    "build": "pnpm build:bundle && pnpm build:types",
+    "build:prebuild": "pnpm prebuild-arm && pnpm prebuild-arm64 && pnpm prebuild-ia32 && pnpm prebuild-x64",
+    "build:bundle": "rimraf dist && rollup -c rollup.config.ts --configPlugin typescript",
+    "build:types": "pnpm build:types:temp && pnpm build:types:roll && pnpm build:types:check",
+    "build:types:temp": "tsc --declaration --emitDeclarationOnly --outDir temp --project tsconfig.build.json",
+    "build:types:roll": "rollup --config rollup.dts.config.ts --configPlugin typescript && rimraf temp",
+    "build:types:check": "tsc --project tsconfig.check.json",
+    "check": "biome check --write .",
+    "clean": "node-gyp clean",
+    "coverage": "vitest --coverage",
+    "install": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && node-gyp-build",
+    "local:build": "node-gyp -j 20 build",
+    "local:build:debug": "node-gyp -j 20 build --debug",
+    "local:rebuild": "node-gyp -j 20 rebuild",
+    "local:rebuild:debug": "node-gyp -j 20 rebuild --debug",
+    "prepublishOnly": "pnpm build && pnpm build:prebuild",
+    "prebuild-arm": "prebuildify --napi --strip --platform='win32' --arch arm",
+    "prebuild-arm64": "prebuildify --napi --strip --platform='win32' --arch arm64",
+    "prebuild-ia32": "prebuildify --napi --strip --platform='win32' --arch ia32",
+    "prebuild-x64": "prebuildify --napi  --strip --platform='win32' --arch x64",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "napi-macros": "2.2.2",
+    "node-gyp": "10.1.0",
+    "node-gyp-build": "4.8.1",
+    "snooplogg": "6.0.0-rc.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@rollup/plugin-node-resolve": "15.2.3",
+    "@rollup/plugin-typescript": "11.1.6",
+    "@types/node": "20.14.9",
+    "@vitest/coverage-v8": "1.6.0",
+    "esbuild": "0.22.0",
+    "lefthook": "1.6.18",
+    "prebuildify": "6.0.1",
+    "rimraf": "5.0.7",
+    "rollup": "4.18.0",
+    "rollup-plugin-dts": "6.1.1",
+    "rollup-plugin-esbuild": "6.1.1",
+    "tslib": "2.6.3",
+    "typescript": "5.5.2",
+    "vitest": "1.6.0"
+  },
+  "homepage": "https://github.com/tidev/winreglib",
+  "bugs": "https://github.com/tidev/winreglib/issues",
+  "repository": "https://github.com/tidev/winreglib",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "node-gyp-build@4.8.1": "patches/node-gyp-build@4.8.1.patch"
+    }
+  }
 }

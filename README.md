@@ -153,11 +153,9 @@ winreglib.on('log', msg => console.log(msg));
 Alternatively, `winreglib` uses the amazing [`snooplogg`][2] debug logger where you simply set the
 `SNOOPLOGG` environment variable to `winreglib` (or `*`) and it will print the debug log to stdout.
 
-## License
+## Legal
 
-This project is open source under the [Apache Public License v2][1] and is developed by
-[Axway, Inc](http://www.axway.com/) and the community. Please read the [`LICENSE`][1] file included
-in this distribution for more information.
+Titanium is a registered trademark of TiDev Inc. All Titanium trademark and patent rights were transferred and assigned to TiDev Inc. on 4/7/2022. Please see the LEGAL information about using our trademarks, privacy policy, terms of usage and other legal information at https://tidev.io/legal.
 
 [1]: https://github.com/appcelerator/winreglib/blob/master/LICENSE
 [2]: https://www.npmjs.com/package/snooplogg
