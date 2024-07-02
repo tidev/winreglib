@@ -20,7 +20,7 @@ const DWORD filter = REG_NOTIFY_CHANGE_NAME |
 
 #define PUSH_CALLBACK(list, evtType, key, listeners) \
 	if (listeners.size() > 0) { \
-		char* type = evtType; \
+		char type[] = evtType; \
 		(list).push(std::make_shared<Callback>(type, key, listeners)); \
 	}
 
