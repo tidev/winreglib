@@ -31,7 +31,7 @@
 	"dependencies": {
 		"napi-macros": "^2.0.0",
 		"node-gyp": "^10.1.0",
-		"node-gyp-build": "^4.2.3",
+		"node-gyp-build": "4.8.0",
 		"snooplogg": "^3.0.1"
 	},
 	"devDependencies": {

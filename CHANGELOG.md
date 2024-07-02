@@ -1,3 +1,11 @@
+# v2.0.4 (July 2, 2024)
+
+ * fix: Fixed crash when app exits (thanks TitusQian)
+
+# v2.0.3 (Jan 5, 2021)
+
+ * Not sure what changed.
+
 # v2.0.2 (Dec 1, 2020)
 
  * chore: Updated dependencies.
