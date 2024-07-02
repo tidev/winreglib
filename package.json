@@ -1,6 +1,6 @@
 {
 	"name": "winreglib",
-	"version": "2.0.2",
+	"version": "2.0.3",
 	"description": "Windows Registry Utility Library",
 	"main": "./src/index",
 	"gypfile": true,
@@ -30,7 +30,7 @@
 	},
 	"dependencies": {
 		"napi-macros": "^2.0.0",
-		"node-gyp": "^7.1.2",
+		"node-gyp": "^10.1.0",
 		"node-gyp-build": "^4.2.3",
 		"snooplogg": "^3.0.1"
 	},
