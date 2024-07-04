@@ -39,7 +39,7 @@ private:
 	HANDLE refresh;
 	std::mutex activeLock;
 	std::vector<std::weak_ptr<WatchNode>> active;
-	uv_async_t notifyChange;
+	uv_async_t* notifyChange;
 	std::deque<std::shared_ptr<WatchNode>> changedNodes;
 	std::mutex changedNodesLock;
 };

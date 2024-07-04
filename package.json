@@ -1,6 +1,6 @@
 {
   "name": "winreglib",
-  "version": "4.0.0",
+  "version": "3.0.0",
   "description": "Windows Registry utility library",
   "type": "module",
   "exports": "./dist/index.js",
@@ -8,7 +8,12 @@
   "gypfile": true,
   "author": "TiDev, Inc. <npm@tidev.io>",
   "license": "Apache-2.0",
-  "keywords": ["windows", "windows registry", "winreg", "microsoft"],
+  "keywords": [
+    "windows",
+    "windows registry",
+    "winreg",
+    "microsoft"
+  ],
   "scripts": {
     "build": "pnpm build:bundle && pnpm build:types",
     "build:prebuild": "pnpm prebuild-arm && pnpm prebuild-arm64 && pnpm prebuild-ia32 && pnpm prebuild-x64",
@@ -45,7 +50,7 @@
     "@rollup/plugin-typescript": "11.1.6",
     "@types/node": "20.14.9",
     "@vitest/coverage-v8": "1.6.0",
-    "esbuild": "0.22.0",
+    "esbuild": "0.23.0",
     "lefthook": "1.6.18",
     "prebuildify": "6.0.1",
     "rimraf": "5.0.7",
@@ -53,7 +58,7 @@
     "rollup-plugin-dts": "6.1.1",
     "rollup-plugin-esbuild": "6.1.1",
     "tslib": "2.6.3",
-    "typescript": "5.5.2",
+    "typescript": "5.5.3",
     "vitest": "1.6.0"
   },
   "homepage": "https://github.com/tidev/winreglib",

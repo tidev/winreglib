@@ -1,15 +1,15 @@
 diff --git a/bin.js b/bin.js
-index 7ca3ab5fd0babcfde234427387df4904b9e5f6f4..e2c6341228abc586bd5531b00e416269ce0a5947 100644
+index 7ca3ab5fd0babcfde234427387df4904b9e5f6f4..c778e0ab9fc691b429f5c46c56a801cf28ab3fcd 100644
 --- a/bin.js
 +++ b/bin.js
-@@ -18,6 +18,7 @@ if (!buildFromSource()) {
+@@ -17,6 +17,7 @@ if (!buildFromSource()) {
+ 
  function build () {
    var win32 = os.platform() === 'win32'
-   var args = [win32 ? 'node-gyp.cmd' : 'node-gyp', 'rebuild']
 +  var shell = win32
+   var args = [win32 ? 'node-gyp.cmd' : 'node-gyp', 'rebuild']
  
    try {
-     var pkg = require('node-gyp/package.json')
 @@ -26,9 +27,10 @@ function build () {
        path.join(require.resolve('node-gyp/package.json'), '..', typeof pkg.bin === 'string' ? pkg.bin : pkg.bin['node-gyp']),
        'rebuild'

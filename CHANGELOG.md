@@ -1,6 +1,15 @@
 # v3.0.0
 
  * BREAKING CHANGE: Require Node.js 18.17 or newer
+ * feat: Support for arm/arm64
+
+# v2.0.4 (July 2, 2024)
+
+ * fix: Fixed crash when app exits (thanks TitusQian)
+
+# v2.0.3 (Jan 5, 2021)
+
+ * Not sure what changed.
 
 # v2.0.2 (Dec 1, 2020)
 
