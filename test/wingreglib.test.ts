@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import * as winreglib from '../src/index.js';
+import winreglib from '../src/index.js';
 const { spawnSync } = require('node:child_process');
 import snooplogg from 'snooplogg';
 
