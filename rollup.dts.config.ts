@@ -1,4 +1,3 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { defineConfig } from 'rollup';
 import { dts } from 'rollup-plugin-dts';
 
@@ -10,7 +9,6 @@ export default defineConfig([
 			format: 'es'
 		},
 		plugins: [
-			nodeResolve({ preferBuiltins: true }),
 			dts({
 				respectExternal: true
 			})

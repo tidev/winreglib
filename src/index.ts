@@ -6,7 +6,7 @@ import snooplogg, { type Logger } from 'snooplogg';
 const { default: nodeGypBuild } = await import(
 	'node-gyp-build/node-gyp-build.js'
 );
-const binding = nodeGypBuild(dirname(fileURLToPath(import.meta.url)));
+const binding = nodeGypBuild(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const logger = snooplogg('winreglib');
 
