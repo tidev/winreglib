@@ -1,4 +1,3 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import { defineConfig } from 'rollup';
 import { minify as esbuildMinifyPlugin } from 'rollup-plugin-esbuild';
@@ -15,7 +14,6 @@ export default defineConfig([
 			sourcemap: true
 		},
 		plugins: [
-			nodeResolve({ preferBuiltins: true }),
 			esbuildMinifyPlugin({
 				minify: true,
 				minifySyntax: true

@@ -1,12 +1,18 @@
 import { EventEmitter } from 'node:events';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as nodeGypBuild from 'node-gyp-build';
 import snooplogg, { type Logger } from 'snooplogg';
 
-const binding = nodeGypBuild(`${fileURLToPath(import.meta.dirname)}/..`);
+const { default: nodeGypBuild } = await import(
+	'node-gyp-build/node-gyp-build.js'
+);
+const binding = nodeGypBuild(dirname(fileURLToPath(import.meta.url)));
 
 const logger = snooplogg('winreglib');
 
+/**
+ * A handle for watching a registry key for changes.
+ */
 export class WinRegLibWatchHandle extends EventEmitter {
 	key: string;
 
