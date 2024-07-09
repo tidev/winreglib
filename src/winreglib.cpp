@@ -222,9 +222,12 @@ NAPI_METHOD(init) {
 	// wire up the log notification handler
 	uv_loop_t* loop;
 	napi_get_uv_event_loop(env, &loop);
-	winreglib::logNotify.data = env;
-	uv_async_init(loop, &winreglib::logNotify, &dispatchLog);
-	uv_unref((uv_handle_t*)&winreglib::logNotify);
+	if (!winreglib::logNotify) {
+		winreglib::logNotify = new uv_async_t;
+	}
+	winreglib::logNotify->data = env;
+	uv_async_init(loop, (uv_async_t*)winreglib::logNotify, &dispatchLog);
+	uv_unref((uv_handle_t*)winreglib::logNotify);
 
 	// create the reference for the emit log callback so it doesn't get GC'd
 	NAPI_THROW_RETURN("init", "ERR_NAPI_CREATE_REFERENCE", napi_create_reference(env, logFn, 1, &winreglib::logRef), NULL)
@@ -376,27 +379,31 @@ NAPI_METHOD(unwatch) {
 }
 
 /**
- * Destroys the Watchman instance and closes open handles.
+ * Destroys the Watchman instance, log ref handle, and notify handle.
  */
-static void cleanup(void* arg) {
-	napi_env env = (napi_env)arg;
-
+static void cleanup(napi_async_cleanup_hook_handle handle, void* arg) {
 	if (winreglib::watchman) {
-		LOG_DEBUG("cleanup", L"Deleting watchman")
 		delete winreglib::watchman;
-		winreglib::watchman = NULL;
 	}
-
-	uv_close((uv_handle_t*)&winreglib::logNotify, NULL);
 
 	if (winreglib::logRef) {
-		napi_delete_reference(env, winreglib::logRef);
+		napi_delete_reference((napi_env)arg, winreglib::logRef);
 		winreglib::logRef = NULL;
 	}
+
+	if (winreglib::logNotify) {
+		uv_close((uv_handle_t*)winreglib::logNotify, [](uv_handle_t* handle) {
+			if (handle) {
+				delete handle;
+			}
+		});
+	}
+
+	napi_remove_async_cleanup_hook(handle);
 }
 
 /**
- * Wire up the public API and cleanup handler and creates the Watchman instance.
+ * Wire up the public API, cleanup handler, and creates the Watchman instance.
  */
 NAPI_INIT() {
 	NAPI_EXPORT_FUNCTION(get);
@@ -405,7 +412,11 @@ NAPI_INIT() {
 	NAPI_EXPORT_FUNCTION(watch);
 	NAPI_EXPORT_FUNCTION(unwatch);
 
-	NAPI_THROW("init", "ERR_NAPI_ADD_ENV_CLEANUP_HOOK", napi_add_env_cleanup_hook(env, cleanup, env))
+	NAPI_THROW(
+		"init",
+		"ERR_NAPI_ADD_ASYNC_CLEANUP_HOOK",
+		napi_add_async_cleanup_hook(env, cleanup, NULL, NULL)
+	)
 
 	winreglib::watchman = new winreglib::Watchman(env);
 }

@@ -1,12 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import nodeGypBuild from 'node-gyp-build/node-gyp-build.js';
 import snooplogg, { type Logger } from 'snooplogg';
 
-const { default: nodeGypBuild } = await import(
-	'node-gyp-build/node-gyp-build.js'
-);
-const binding = nodeGypBuild(dirname(dirname(fileURLToPath(import.meta.url))));
+const cwd = dirname(dirname(fileURLToPath(import.meta.url)));
+const binding = nodeGypBuild(cwd);
 
 const logger = snooplogg('winreglib');
 
@@ -15,24 +14,24 @@ const logger = snooplogg('winreglib');
  */
 export class WinRegLibWatchHandle extends EventEmitter {
 	key: string;
+	stop: () => void;
 
 	constructor(key: string) {
 		super();
 		this.key = key;
-		this.emit = this.emit.bind(this);
-		binding.watch(key, this.emit);
-	}
 
-	stop() {
-		binding.unwatch(this.key, this.emit);
+		const emitter = this.emit.bind(this);
+		binding.watch(key, emitter);
+
+		this.stop = () => binding.unwatch(this.key, emitter);
 	}
 }
 
 export type RegistryKey = {
-	root: string;
-	path: string;
+	resolvedRoot: string;
+	key: string;
 	subkeys: string[];
-	values: Record<string, unknown>;
+	values: unknown[];
 };
 
 /**
@@ -85,7 +84,7 @@ class WinRegLib extends EventEmitter {
 	 * @param {String} key - The key to list.
 	 * @returns {Object} Contains the resolved `root`, `path`, `subkeys`, and `values`.
 	 */
-	list(key: string): RegistryKey {
+	list(key: string): RegistryKey | undefined {
 		if (!key || typeof key !== 'string') {
 			throw new TypeError('Expected key to be a non-empty string');
 		}
