@@ -382,6 +382,8 @@ NAPI_METHOD(unwatch) {
  * Destroys the Watchman instance, log ref handle, and notify handle.
  */
 static void cleanup(napi_async_cleanup_hook_handle handle, void* arg) {
+	LOG_DEBUG("cleanup", L"CLEANING UP!")
+
 	if (winreglib::watchman) {
 		delete winreglib::watchman;
 	}

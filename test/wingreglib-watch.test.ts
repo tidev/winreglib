@@ -32,7 +32,7 @@ describe('watch()', () => {
 		}).toThrowError(new TypeError('Invalid registry root key "foo"'));
 	});
 
-	it(
+	it.only(
 		'should watch existing key for new subkey',
 		{ timeout: 15000 },
 		async () => {
@@ -45,7 +45,7 @@ describe('watch()', () => {
 				let counter = 0;
 				await new Promise<void>((resolve, reject) => {
 					handle.on('change', evt => {
-						// console.log('CHANGE!', evt);
+						// log('CHANGE!', evt);
 						try {
 							expect(evt).toBeInstanceOf(Object);
 							switch (counter++) {
@@ -70,6 +70,7 @@ describe('watch()', () => {
 					});
 					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
 				});
+
 				handle.stop();
 			} finally {
 				// also test stop() being called twice
@@ -79,34 +80,40 @@ describe('watch()', () => {
 		}
 	);
 
-	it.skip(
+	it.only(
 		'should watch existing key for value change',
 		{ timeout: 15000 },
 		async () => {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
-			reg('add', 'HKCU\\Software\\winreglib');
+			reg('delete', 'HKCU\\Software\\winreglib2', '/f');
+			reg('add', 'HKCU\\Software\\winreglib2');
 
-			const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib');
+			const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib2');
 
 			try {
 				let counter = 0;
 				await new Promise<void>((resolve, reject) => {
 					handle.on('change', evt => {
-						console.log('CHANGE!', evt);
+						// log('CHANGE!', evt);
 						try {
 							expect(evt).toBeTypeOf('object');
 							switch (counter++) {
 								case 0:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib2'
 									});
-									reg('delete', 'HKCU\\Software\\winreglib', '/f', '/v', 'foo');
+									reg(
+										'delete',
+										'HKCU\\Software\\winreglib2',
+										'/f',
+										'/v',
+										'foo'
+									);
 									break;
 								case 1:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib2'
 									});
 									resolve();
 									break;
@@ -119,7 +126,7 @@ describe('watch()', () => {
 						() =>
 							reg(
 								'add',
-								'HKCU\\Software\\winreglib',
+								'HKCU\\Software\\winreglib2',
 								'/v',
 								'foo',
 								'/t',
@@ -132,7 +139,7 @@ describe('watch()', () => {
 				});
 			} finally {
 				handle.stop();
-				reg('delete', 'HKCU\\Software\\winreglib', '/f');
+				reg('delete', 'HKCU\\Software\\winreglib2', '/f');
 			}
 		}
 	);

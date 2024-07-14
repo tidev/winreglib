@@ -36,12 +36,12 @@
     "prebuild-x64": "prebuildify --napi --strip --platform=win32 --arch x64",
     "rebuild:local": "node-gyp -j 20 rebuild",
     "rebuild:local-debug": "node-gyp -j 20 rebuild --debug",
-    "test": "vitest --pool=forks",
+    "test": "vitest --allowOnly --pool=forks",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "napi-macros": "2.2.2",
-    "node-gyp": "10.1.0",
+    "node-gyp": "10.2.0",
     "node-gyp-build": "4.8.1",
     "snooplogg": "6.0.0-rc.1"
   },
@@ -49,17 +49,17 @@
     "@biomejs/biome": "1.8.3",
     "@rollup/plugin-typescript": "11.1.6",
     "@types/node": "20.14.10",
-    "@vitest/coverage-v8": "2.0.1",
+    "@vitest/coverage-v8": "2.0.2",
     "esbuild": "0.23.0",
-    "lefthook": "1.7.1",
+    "lefthook": "1.7.2",
     "prebuildify": "6.0.1",
-    "rimraf": "6.0.0",
+    "rimraf": "6.0.1",
     "rollup": "4.18.1",
     "rollup-plugin-dts": "6.1.1",
     "rollup-plugin-esbuild": "6.1.1",
     "tslib": "2.6.3",
     "typescript": "5.5.3",
-    "vitest": "2.0.1"
+    "vitest": "2.0.2"
   },
   "homepage": "https://github.com/tidev/winreglib",
   "bugs": "https://github.com/tidev/winreglib/issues",

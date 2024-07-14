@@ -82,7 +82,7 @@ class WinRegLib extends EventEmitter {
 	 * Lists all subkeys and values for a specific key.
 	 *
 	 * @param {String} key - The key to list.
-	 * @returns {Object} Contains the resolved `root`, `path`, `subkeys`, and `values`.
+	 * @returns {RegistryKey} Contains the resolved `resolvedRoot`, `key`, `subkeys`, and `values`.
 	 */
 	list(key: string): RegistryKey | undefined {
 		if (!key || typeof key !== 'string') {

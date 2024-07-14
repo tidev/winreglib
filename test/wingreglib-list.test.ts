@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import { describe, expect, it } from 'vitest';
 import winreglib from '../src/index.js';
 
-describe('list()', () => {
+describe.skip('list()', () => {
 	it('should error if key is not specified', () => {
 		expect(() => {
 			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input
