@@ -34,8 +34,8 @@
     "prebuild-arm64": "prebuildify --napi --strip --platform=win32 --arch arm64",
     "prebuild-ia32": "prebuildify --napi --strip --platform=win32 --arch ia32",
     "prebuild-x64": "prebuildify --napi --strip --platform=win32 --arch x64",
-    "rebuild:local": "node-gyp -j 20 rebuild",
-    "rebuild:local-debug": "node-gyp -j 20 rebuild --debug",
+    "rebuild:local": "node-gyp rebuild",
+    "rebuild:local-debug": "node-gyp rebuild --debug",
     "test": "vitest --allowOnly --pool=forks",
     "type-check": "tsc --noEmit"
   },

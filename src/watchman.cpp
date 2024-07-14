@@ -6,17 +6,14 @@
 using namespace winreglib;
 
 static void execute(napi_env env, void* data) {
-	LOG_DEBUG("execute", L"Calling run()");
 	((Watchman*)data)->run();
-	LOG_DEBUG("execute", L"run() returned!");
 }
 
 static void complete(napi_env env, napi_status status, void* data) {
 	if (status != napi_ok) {
 		const napi_extended_error_info* error;
 		::napi_get_last_error_info(env, &error);
-		char msg[1024];
-		::snprintf(msg, 1024, "Watchman::complete: Worker thread failed (status=%d) %s", status, error->error_message);
+		LOG_DEBUG_2("Watchman::complete", L"Watchman::complete: Worker thread failed (status=%d) %s", status, error->error_message)
 	} else {
 		LOG_DEBUG_1("Watchman::complete", L"Worker thread exited (status=%d)", status)
 	}
@@ -65,13 +62,8 @@ Watchman::Watchman(napi_env env) : env(env) {
 	notifyChange = new uv_async_t;
 	notifyChange->data = (void*)this;
 	::uv_async_init(loop, notifyChange, [](uv_async_t* handle) {
-		LOG_DEBUG("Watchman::Watchman", L"uv_async_t callback")
 		if (handle && handle->data) {
-			LOG_DEBUG("Watchman::Watchman", L"Calling dispatch()")
 			((Watchman*)handle->data)->dispatch();
-			LOG_DEBUG("Watchman::Watchman", L"dispatch() success!")
-		} else {
-			LOG_DEBUG("Watchman::Watchman", L"No data in handle! Watchman is no more!")
 		}
 	});
 	::uv_unref((uv_handle_t*)notifyChange);
@@ -81,17 +73,15 @@ Watchman::Watchman(napi_env env) : env(env) {
  * Stops the background thread and closes all handles.
  */
 Watchman::~Watchman() {
-	LOG_DEBUG("Watchman::~Watchman", L"Stopping background thread")
+	::SetEvent(term);
+	::napi_delete_async_work(env, asyncWork);
+	::CloseHandle(term);
+	::CloseHandle(refresh);
 
 	::uv_close(reinterpret_cast<uv_handle_t*>(notifyChange), [](uv_handle_t* handle) {
 		uv_async_t* async = reinterpret_cast<uv_async_t*>(handle);
 		delete async;
 	});
-
-	::SetEvent(term);
-	::napi_delete_async_work(env, asyncWork);
-	::CloseHandle(term);
-	::CloseHandle(refresh);
 }
 
 /**
@@ -168,25 +158,12 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 		}
 	}
 
-	// if (beforeCount == 0 && afterCount > 0) {
-	// 	LOG_DEBUG_THREAD_ID("Watchman::config", L"Starting background thread")
-	// 	NAPI_THROW("Watchman::config", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
-	// } else if (beforeCount > 0 && afterCount == 0) {
-	// 	LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling term event")
-	// 	::SetEvent(term);
-	// } else if (beforeCount != afterCount) {
-	// 	LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling refresh event")
-	// 	::SetEvent(refresh);
-	// }
-
-	if ((beforeCount > 0 || afterCount > 0) && beforeCount != afterCount) {
+	if (afterCount > 0 && beforeCount != afterCount) {
 		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling refresh event")
 		::SetEvent(refresh);
 	}
 
-	LOG_DEBUG("Watchman::config", L"Printing tree")
 	printTree();
-	LOG_DEBUG("Watchman::config", L"Done printing tree")
 }
 
 /**
@@ -203,20 +180,15 @@ void Watchman::dispatch() {
 		// check if there are any changed nodes left...
 		// the first time we loop, we know there's at least one
 		{
-			LOG_DEBUG("Watchman::dispatch", L"Obtaining lock for changed nodes...")
 			std::lock_guard<std::mutex> lock(changedNodesLock);
 
 			if (changedNodes.empty()) {
-				LOG_DEBUG("Watchman::dispatch", L"No changed nodes to dispatch, returning")
 				return;
 			}
 
 			remaining = changedNodes.size();
-			LOG_DEBUG_1("Watchman::dispatch", L"Found %ld changed nodes", remaining)
 			node = changedNodes.front();
-			LOG_DEBUG("Watchman::dispatch", L"Popping changed node...")
 			changedNodes.pop_front();
-			LOG_DEBUG("Watchman::dispatch", L"Popped changed node!")
 		}
 
 		LOG_DEBUG_2("Watchman::dispatch", L"Dispatching change event for \"%ls\" (%d remaining)", node->name.c_str(), --remaining)
@@ -260,9 +232,7 @@ void Watchman::run() {
 
 	while (1) {
 		if (handles != NULL) {
-			LOG_DEBUG("Watchman::run", L"Deleting handles 1")
 			delete[] handles;
-			LOG_DEBUG("Watchman::run", L"Deleted handles 1")
 		}
 
 		// WaitForMultipleObjects() wants an array of handles, so we must construct one
@@ -322,16 +292,12 @@ void Watchman::run() {
 							}
 						}
 
-						LOG_DEBUG("Watchman::run", L"Sending notification to main thread")
 						::uv_async_send(notifyChange);
-						LOG_DEBUG("Watchman::run", L"Done sending notification to main thread")
 					}
 				}
 			}
 		}
 	}
 
-	LOG_DEBUG("Watchman::run", L"Deleting handles 2")
 	delete[] handles;
-	LOG_DEBUG("Watchman::run", L"Deleted handles 2")
 }
