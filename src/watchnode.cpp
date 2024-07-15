@@ -112,7 +112,7 @@ bool WatchNode::load(CallbackQueue* pending) {
 			watch(pending);
 
 			if (pending) {
-				PUSH_CALLBACK(*pending, "add", getKey(), listeners);
+				PUSH_CALLBACK(*pending, "add", getKey(), listeners)
 			}
 
 			for (auto const& it : subkeys) {
@@ -146,7 +146,7 @@ bool WatchNode::onChange() {
 
 	if (hkey) {
 		if (watch(&pending)) {
-			PUSH_CALLBACK(pending, "change", getKey(), listeners);
+			PUSH_CALLBACK(pending, "change", getKey(), listeners)
 		}
 
 		for (auto const& it : subkeys) {
@@ -251,7 +251,7 @@ void WatchNode::unload(CallbackQueue* pending) {
 		hkey = NULL;
 
 		if (pending) {
-			PUSH_CALLBACK(*pending, "delete", getKey(), listeners);
+			PUSH_CALLBACK(*pending, "delete", getKey(), listeners)
 		}
 	}
 }

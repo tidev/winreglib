@@ -11,7 +11,7 @@ const reg = (...args) => {
 	spawnSync('reg', args, { stdio: 'ignore' });
 };
 
-describe.skip('get()', () => {
+describe('get()', () => {
 	it('should error if key is not specified', () => {
 		expect(() => {
 			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input

@@ -20,7 +20,7 @@ const DWORD filter = REG_NOTIFY_CHANGE_NAME |
 
 #define PUSH_CALLBACK(list, evtType, key, listeners) \
 	if (listeners.size() > 0) { \
-		char type[] = evtType; \
+		const char* type = evtType; \
 		(list).push(std::make_shared<Callback>(type, key, listeners)); \
 	}
 
@@ -28,10 +28,13 @@ const DWORD filter = REG_NOTIFY_CHANGE_NAME |
  * Holds everything needed to emit a change event for a given node.
  */
 struct Callback {
-	Callback(char* type, std::u16string key, std::list<napi_ref> listeners) :
-		type(type), key(key), listeners(listeners) {}
+	Callback(const char* type, std::u16string key, std::list<napi_ref> listeners) :
+		key(key), listeners(listeners)
+	{
+		strncpy(this->type, type, 10);
+	}
 
-	char* type;
+	char type[10];
 	std::u16string key;
 	std::list<napi_ref> listeners;
 };

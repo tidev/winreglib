@@ -13,7 +13,7 @@ static void complete(napi_env env, napi_status status, void* data) {
 	if (status != napi_ok) {
 		const napi_extended_error_info* error;
 		::napi_get_last_error_info(env, &error);
-		LOG_DEBUG_2("Watchman::complete", L"Watchman::complete: Worker thread failed (status=%d) %s", status, error->error_message)
+		LOG_DEBUG_2("Watchman::complete", L"Watchman::complete: Worker thread failed (status=%d) %hs", status, error->error_message)
 	} else {
 		LOG_DEBUG_1("Watchman::complete", L"Worker thread exited (status=%d)", status)
 	}
@@ -62,6 +62,7 @@ Watchman::Watchman(napi_env env) : env(env) {
 	notifyChange = new uv_async_t;
 	notifyChange->data = (void*)this;
 	::uv_async_init(loop, notifyChange, [](uv_async_t* handle) {
+		// the background thread has signaled that a registry event has occurred
 		if (handle && handle->data) {
 			((Watchman*)handle->data)->dispatch();
 		}
@@ -253,7 +254,6 @@ void Watchman::run() {
 
 		LOG_DEBUG_1("Watchman::run", L"Waiting on %ld objects...", count)
 		DWORD result = ::WaitForMultipleObjects(count, handles, FALSE, INFINITE);
-		LOG_DEBUG("Watchman::run", L"Done waiting on objects")
 
 		if (result == WAIT_OBJECT_0) {
 			// terminate
