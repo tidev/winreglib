@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import winreglib from '../src/index.js';
 const { spawnSync } = require('node:child_process');
+import { spawn } from 'node:child_process';
 import snooplogg from 'snooplogg';
 
 const { log } = snooplogg('test:winreglib');
@@ -96,15 +97,29 @@ describe('get()', () => {
 		expect(value).toBeGreaterThanOrEqual(0);
 	});
 
-	it('should get an 64-bit integer value', () => {
-		spawnSync(
-			'reg',
-			[
-				'query',
-				'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\TraceManager'
-			],
-			{ stdio: 'inherit' }
-		);
+	it('should get an 64-bit integer value', async () => {
+		await new Promise<void>(resolve => {
+			const child = spawn(
+				'reg',
+				['query', 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion', '/s'],
+				{ stdio: 'pipe' }
+			);
+			let buffer = '';
+			child.stdout.on('data', data => {
+				buffer += data.toString();
+			});
+			child.on('close', () => {
+				const chunks = buffer.split('\n\n');
+				for (const chunk of chunks) {
+					if (chunk.includes('REG_QWORD')) {
+						console.log('-'.repeat(80));
+						console.log(chunk);
+						console.log('-'.repeat(80));
+					}
+				}
+				resolve();
+			});
+		});
 		const value = winreglib.get(
 			'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\TraceManager',
 			'diagStartTime'
