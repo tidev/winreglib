@@ -99,20 +99,25 @@ describe('get()', () => {
 
 	it('should get an 64-bit integer value', { timeout: 360000 }, async () => {
 		await new Promise<void>(resolve => {
-			console.log('-'.repeat(80));
 			const child = spawn(
 				'reg',
 				['query', 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion', '/s'],
 				{ stdio: 'pipe' }
 			);
+			const buffer: string[] = [];
 			child.stdout.on('data', data => {
 				const s = data.toString();
+				if (buffer.length > 10) {
+					buffer.unshift();
+				}
+				buffer.push(s);
 				if (s.includes('REG_QWORD')) {
-					console.log(s);
+					console.log('-'.repeat(80));
+					console.log(buffer.join('\n'));
+					console.log('-'.repeat(80));
 				}
 			});
 			child.on('close', () => {
-				console.log('-'.repeat(80));
 				resolve();
 			});
 		});
