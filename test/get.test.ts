@@ -101,7 +101,7 @@ describe('get()', () => {
 			'reg',
 			[
 				'query',
-				'HKLMSoftwareMicrosoftWindowsCurrentVersionDiagnosticsDiagTrack'
+				'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack'
 			],
 			{ stdio: 'inherit' }
 		);
