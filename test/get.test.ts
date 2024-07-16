@@ -97,9 +97,17 @@ describe('get()', () => {
 	});
 
 	it('should get an 64-bit integer value', () => {
+		spawnSync(
+			'reg',
+			[
+				'query',
+				'HKLMSoftwareMicrosoftWindowsCurrentVersionDiagnosticsDiagTrack'
+			],
+			{ stdio: 'inherit' }
+		);
 		const value = winreglib.get(
-			'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications',
-			'TimestampWhenSeen'
+			'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack',
+			'TriggerCount'
 		) as number;
 		expect(value).toBeTypeOf('number');
 		expect(value).toBeGreaterThanOrEqual(0);
