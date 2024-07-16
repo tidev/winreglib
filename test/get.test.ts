@@ -98,8 +98,8 @@ describe('get()', () => {
 
 	it('should get an 64-bit integer value', () => {
 		const value = winreglib.get(
-			'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack',
-			'TriggerCount'
+			'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications',
+			'TimestampWhenSeen'
 		) as number;
 		expect(value).toBeTypeOf('number');
 		expect(value).toBeGreaterThanOrEqual(0);
