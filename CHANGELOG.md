@@ -2,6 +2,7 @@
 
  * BREAKING CHANGE: Require Node.js 18.17 or newer
  * feat: Support for arm/arm64
+ * fix: Fixed order of child key events when parent key is deleted
 
 # v2.0.4 (July 2, 2024)
 

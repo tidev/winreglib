@@ -81,6 +81,8 @@ std::u16string WatchNode::getKey() {
 
 /**
  * Attempts to open this node's registry key and watch it.
+ *
+ * Returns true if something changed.
  */
 bool WatchNode::load(CallbackQueue* pending) {
 	bool result = false;
@@ -99,8 +101,6 @@ bool WatchNode::load(CallbackQueue* pending) {
 			LOG_DEBUG_1("WatchNode::load", L"\"%ls\" hkey is still valid", name.c_str())
 		} else {
 			// no longer valid!
-			LOG_DEBUG_1("WatchNode::load", L"\"%ls\" hkey is no longer valid", name.c_str())
-			unload(pending);
 			result = true;
 		}
 	} else {
@@ -116,9 +116,7 @@ bool WatchNode::load(CallbackQueue* pending) {
 			}
 
 			for (auto const& it : subkeys) {
-				if (it.second->load(pending)) {
-					result = true;
-				}
+				it.second->load(pending);
 			}
 
 			result = true;
@@ -146,6 +144,17 @@ bool WatchNode::onChange() {
 
 	if (hkey) {
 		if (watch(&pending)) {
+			// hkey should be valid, check if subkeys are ok
+			LOG_DEBUG_1("WatchNode::onChange", L"Checking if subkeys under \"%ls\" are still valid", name.c_str())
+			for (auto const& it : subkeys) {
+				HKEY tmp;
+				LSTATUS status = ::RegOpenKeyW(hkey, it.second->name.c_str(), &tmp);
+				if (status != ERROR_SUCCESS) {
+					LOG_DEBUG_1("WatchNode::onChange", L"\"%ls\" hkey is no longer valid", it.second->name.c_str())
+					it.second->unload(&pending);
+				}
+			}
+
 			PUSH_CALLBACK(pending, "change", getKey(), listeners)
 		}
 
@@ -240,6 +249,7 @@ void WatchNode::removeListener(napi_value listener) {
  * Closes this node's registry key handle and its subkey's key handles.
  */
 void WatchNode::unload(CallbackQueue* pending) {
+	LOG_DEBUG_1("WatchNode::unload", L"Checking subkeys under \"%ls\" hkey", name.c_str())
 	for (auto const& it : subkeys) {
 		it.second->unload(pending);
 	}
@@ -257,7 +267,9 @@ void WatchNode::unload(CallbackQueue* pending) {
 }
 
 /**
- * Wires up the change notification event.
+ * Wires up the Windows Registry change notification event asynchronously.
+ *
+ * Returns true if the key is valid and the watcher was successfully registered.
  */
 bool WatchNode::watch(CallbackQueue* pending) {
 	if (hkey) {

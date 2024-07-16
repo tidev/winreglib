@@ -68,7 +68,7 @@ describe('watch()', () => {
 							reject(e);
 						}
 					});
-					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
+					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
 				});
 
 				handle.stop();
@@ -134,7 +134,7 @@ describe('watch()', () => {
 								'/d',
 								'bar'
 							),
-						500
+						250
 					);
 				});
 			} finally {
@@ -194,7 +194,7 @@ describe('watch()', () => {
 								});
 								setTimeout(
 									() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
-									500
+									250
 								);
 								break;
 							case 3:
@@ -204,7 +204,7 @@ describe('watch()', () => {
 								});
 								setTimeout(
 									() => reg('add', 'HKCU\\Software\\winreglib\\foo'),
-									500
+									250
 								);
 								break;
 							case 4:
@@ -219,7 +219,7 @@ describe('watch()', () => {
 						reject(e);
 					}
 				});
-				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
+				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
 			});
 		} finally {
 			handle.stop();
@@ -289,7 +289,7 @@ describe('watch()', () => {
 											'/d',
 											'hello3'
 										);
-									}, 1000);
+									}, 250);
 									break;
 								case 2:
 									expect(evt).toMatchObject({
@@ -298,7 +298,7 @@ describe('watch()', () => {
 									});
 									setTimeout(() => {
 										reg('delete', 'HKCU\\Software\\winreglib', '/f');
-									}, 1000);
+									}, 250);
 									break;
 								case 3:
 									expect(evt).toMatchObject({
@@ -313,10 +313,10 @@ describe('watch()', () => {
 						}
 					});
 
-					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 500);
+					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
 					setTimeout(
 						() => reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz\\wiz'),
-						2000
+						250
 					);
 				});
 			} finally {
@@ -354,7 +354,7 @@ describe('watch()', () => {
 				});
 				setTimeout(
 					() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
-					500
+					250
 				);
 			});
 			handle.stop();
@@ -398,7 +398,7 @@ describe('watch()', () => {
 					});
 					setTimeout(
 						() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
-						500
+						250
 					);
 				});
 				handle.stop();
@@ -410,7 +410,7 @@ describe('watch()', () => {
 		}
 	);
 
-	it.only('should survive the gauntlet', { timeout: 15000 }, async () => {
+	it('should survive the gauntlet', { timeout: 150000 }, async () => {
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib');
 
@@ -452,17 +452,17 @@ describe('watch()', () => {
 								reg('delete', 'HKCU\\Software\\winreglib\\foo\\bar', '/f');
 								break;
 							case 3:
-								expect(handleName).toBe('fooHandle');
-								expect(evt).toMatchObject({
-									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
-								});
-								break;
-							case 4:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'delete',
 									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+								});
+								break;
+							case 4:
+								expect(handleName).toBe('fooHandle');
+								expect(evt).toMatchObject({
+									type: 'change',
+									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
 								});
 								reg(
 									'add',
@@ -578,7 +578,7 @@ describe('watch()', () => {
 				bazHandle.on('change', evt => fn(evt, 'bazHandle'));
 				setTimeout(
 					() => reg('add', 'HKCU\\Software\\winreglib\\foo\\bar'),
-					500
+					250
 				);
 			});
 		} finally {

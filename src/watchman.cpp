@@ -203,12 +203,12 @@ void Watchman::dispatch() {
  * Prints the watcher tree for debugging.
  */
 void Watchman::printTree() {
-	std::wstringstream wss(L"");
-	std::wstring line;
-	root->print(wss);
-	while (std::getline(wss, line, L'\n')) {
-		WLOG_DEBUG("Watchman::printTree", line)
-	}
+	// std::wstringstream wss(L"");
+	// std::wstring line;
+	// root->print(wss);
+	// while (std::getline(wss, line, L'\n')) {
+	// 	WLOG_DEBUG("Watchman::printTree", line)
+	// }
 }
 
 /**
