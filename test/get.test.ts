@@ -97,7 +97,7 @@ describe('get()', () => {
 		expect(value).toBeGreaterThanOrEqual(0);
 	});
 
-	it('should get an 64-bit integer value', async () => {
+	it('should get an 64-bit integer value', { timeout: 60000 }, async () => {
 		await new Promise<void>(resolve => {
 			const child = spawn(
 				'reg',

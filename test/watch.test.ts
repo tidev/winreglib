@@ -410,7 +410,7 @@ describe('watch()', () => {
 		}
 	);
 
-	it('should survive the gauntlet', { timeout: 150000 }, async () => {
+	it('should survive the gauntlet', { timeout: 15000 }, async () => {
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib');
 
