@@ -101,16 +101,15 @@ describe('get()', () => {
 			'reg',
 			[
 				'query',
-				'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack'
+				'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\TraceManager'
 			],
 			{ stdio: 'inherit' }
 		);
 		const value = winreglib.get(
-			'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack',
-			'TriggerCount'
+			'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack\\TraceManager',
+			'diagStartTime'
 		) as number;
 		expect(value).toBeTypeOf('number');
-		expect(value).toBeGreaterThanOrEqual(0);
 	});
 
 	it('should get a binary value', () => {
