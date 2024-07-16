@@ -4,7 +4,6 @@
 #include "winreglib.h"
 #include "watchnode.h"
 #include <deque>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>

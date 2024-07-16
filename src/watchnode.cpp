@@ -249,7 +249,6 @@ void WatchNode::removeListener(napi_value listener) {
  * Closes this node's registry key handle and its subkey's key handles.
  */
 void WatchNode::unload(CallbackQueue* pending) {
-	LOG_DEBUG_1("WatchNode::unload", L"Checking subkeys under \"%ls\" hkey", name.c_str())
 	for (auto const& it : subkeys) {
 		it.second->unload(pending);
 	}

@@ -159,6 +159,8 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 		}
 	}
 
+	// if we have any active listeners and the number of listeners changed,
+	// then signal the refresh
 	if (afterCount > 0 && beforeCount != afterCount) {
 		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling refresh event")
 		::SetEvent(refresh);
@@ -203,12 +205,12 @@ void Watchman::dispatch() {
  * Prints the watcher tree for debugging.
  */
 void Watchman::printTree() {
-	// std::wstringstream wss(L"");
-	// std::wstring line;
-	// root->print(wss);
-	// while (std::getline(wss, line, L'\n')) {
-	// 	WLOG_DEBUG("Watchman::printTree", line)
-	// }
+	std::wstringstream wss(L"");
+	std::wstring line;
+	root->print(wss);
+	while (std::getline(wss, line, L'\n')) {
+		WLOG_DEBUG("Watchman::printTree", line)
+	}
 }
 
 /**
