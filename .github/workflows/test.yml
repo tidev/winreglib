@@ -2,6 +2,10 @@ name: Tests
 
 on: [push, pull_request]
 
+concurrency:
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   test:
     name: Test on node ${{ matrix.node }}

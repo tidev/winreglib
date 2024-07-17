@@ -43,12 +43,12 @@
     "napi-macros": "2.2.2",
     "node-gyp": "10.2.0",
     "node-gyp-build": "4.8.1",
-    "snooplogg": "6.0.0-rc.1"
+    "snooplogg": "6.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
     "@rollup/plugin-typescript": "11.1.6",
-    "@types/node": "20.14.10",
+    "@types/node": "20.14.11",
     "@vitest/coverage-v8": "2.0.3",
     "esbuild": "0.23.0",
     "lefthook": "1.7.2",
