@@ -20,7 +20,7 @@
     "build:bundle": "rimraf dist && rollup -c rollup.config.ts --configPlugin typescript && pnpm build:types",
     "build:local": "node-gyp -j 20 build",
     "build:local-debug": "node-gyp -j 20 build --debug",
-    "build:prebuild": "pnpm prebuild-arm && pnpm prebuild-arm64 && pnpm prebuild-ia32 && pnpm prebuild-x64",
+    "build:prebuild": "pnpm pnpm prebuild-ia32 && pnpm prebuild-x64",
     "build:types": "pnpm build:types:temp && pnpm build:types:roll && pnpm build:types:check",
     "build:types:temp": "tsc --declaration --emitDeclarationOnly --outDir temp --project tsconfig.build.json",
     "build:types:roll": "rollup --config rollup.dts.config.ts --configPlugin typescript && rimraf temp",

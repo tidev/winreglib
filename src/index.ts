@@ -63,19 +63,19 @@ class WinRegLib extends EventEmitter {
 	 * Gets the value for a specific key value.
 	 *
 	 * @param {String} key - The key.
-	 * @param {String} value - The name of the value to get.
+	 * @param {String} valueName - The name of the value to get.
 	 * @returns {*} The value reflects the data type from the registry.
 	 */
-	get(key: string, value: string): unknown {
+	get(key: string, valueName: string): unknown {
 		if (!key || typeof key !== 'string') {
 			throw new TypeError('Expected key to be a non-empty string');
 		}
 
-		if (!value || typeof value !== 'string') {
+		if (!valueName || typeof valueName !== 'string') {
 			throw new TypeError('Expected value name to be a non-empty string');
 		}
 
-		return binding.get(key, value);
+		return binding.get(key, valueName);
 	}
 
 	/**
