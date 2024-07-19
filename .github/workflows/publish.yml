@@ -15,7 +15,7 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 20
         registry-url: 'https://registry.npmjs.org/'
 
     - name: Install pnpm
@@ -26,10 +26,10 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
+    - name: Lint
+      run: pnpm check
+
     - name: Publish to npm
       env:
-        GH_TOKEN: ${{ github.token }}
-        GITHUB_TOKEN: ${{ github.token }}
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}

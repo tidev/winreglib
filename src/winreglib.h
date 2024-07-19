@@ -4,7 +4,8 @@
 // enable the following line to bypass the message queue and print the raw debug log messages to stdout
 // #define ENABLE_RAW_DEBUGGING
 
-#define NAPI_VERSION 3
+// v12.22.0+, v14.17.0+, v15.12.0+, 16.0.0 and all later versions
+#define NAPI_VERSION 8
 
 #include <map>
 #include <napi-macros.h>
@@ -193,12 +194,12 @@ namespace winreglib {
 
 #define LOG_DEBUG_VARS \
 	std::mutex logLock; \
-	uv_async_t logNotify; \
+	uv_async_t* logNotify; \
 	std::queue<std::shared_ptr<winreglib::LogMessage>> logQueue;
 
 #define LOG_DEBUG_EXTERN_VARS \
 	extern std::mutex logLock; \
-	extern uv_async_t logNotify; \
+	extern uv_async_t* logNotify; \
 	extern std::queue<std::shared_ptr<winreglib::LogMessage>> logQueue;
 
 #ifdef ENABLE_RAW_DEBUGGING
@@ -218,7 +219,9 @@ namespace winreglib {
 			std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
 			std::lock_guard<std::mutex> lock(winreglib::logLock); \
 			winreglib::logQueue.push(obj); \
-			::uv_async_send(&winreglib::logNotify); \
+			if (winreglib::logNotify) { \
+				::uv_async_send(winreglib::logNotify); \
+			} \
 		}
 
 	#define WLOG_DEBUG(ns, wmsg) \
@@ -227,7 +230,9 @@ namespace winreglib {
 			std::shared_ptr<winreglib::LogMessage> obj = std::make_shared<winreglib::LogMessage>(ns, u16buffer); \
 			std::lock_guard<std::mutex> lock(winreglib::logLock); \
 			winreglib::logQueue.push(obj); \
-			::uv_async_send(&winreglib::logNotify); \
+			if (winreglib::logNotify) { \
+				::uv_async_send(winreglib::logNotify); \
+			} \
 		}
 #endif
 

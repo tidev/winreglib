@@ -10,7 +10,13 @@ static void execute(napi_env env, void* data) {
 }
 
 static void complete(napi_env env, napi_status status, void* data) {
-	LOG_DEBUG("Watchman::complete", L"Worker thread exited")
+	if (status != napi_ok) {
+		const napi_extended_error_info* error;
+		::napi_get_last_error_info(env, &error);
+		LOG_DEBUG_2("Watchman::complete", L"Watchman::complete: Worker thread failed (status=%d) %hs", status, error->error_message)
+	} else {
+		LOG_DEBUG_1("Watchman::complete", L"Worker thread exited (status=%d)", status)
+	}
 }
 
 /**
@@ -31,16 +37,36 @@ Watchman::Watchman(napi_env env) : env(env) {
 	// initialize the background thread that waits for win32 events
 	LOG_DEBUG_THREAD_ID("Watchman", L"Initializing async work")
 	napi_value name;
-	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(env, "winreglib.runloop", NAPI_AUTO_LENGTH, &name));
-	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_ASYNC_WORK", ::napi_create_async_work(env, NULL, name, execute, complete, this, &asyncWork));
+	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(
+		env,
+		"winreglib.runloop",
+		NAPI_AUTO_LENGTH,
+		&name
+	))
+	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_ASYNC_WORK", ::napi_create_async_work(
+		env,
+		NULL,
+		name,
+		execute,
+		complete,
+		this,
+		&asyncWork
+	))
+	NAPI_THROW("Watchman", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
 
 	// wire up our dispatch change handler into Node's event loop, then unref it so that we don't
 	// block Node from exiting
 	uv_loop_t* loop;
 	::napi_get_uv_event_loop(env, &loop);
+
 	notifyChange = new uv_async_t;
-	notifyChange->data = this;
-	::uv_async_init(loop, notifyChange, [](uv_async_t* handle) { if (handle && handle->data) ((Watchman*)handle->data)->dispatch(); });
+	notifyChange->data = (void*)this;
+	::uv_async_init(loop, notifyChange, [](uv_async_t* handle) {
+		// the background thread has signaled that a registry event has occurred
+		if (handle && handle->data) {
+			((Watchman*)handle->data)->dispatch();
+		}
+	});
 	::uv_unref((uv_handle_t*)notifyChange);
 }
 
@@ -52,7 +78,11 @@ Watchman::~Watchman() {
 	::napi_delete_async_work(env, asyncWork);
 	::CloseHandle(term);
 	::CloseHandle(refresh);
-	::uv_close((uv_handle_t*)notifyChange, [](uv_handle_t* handle) { if (handle) delete (uv_async_t*)handle; });
+
+	::uv_close(reinterpret_cast<uv_handle_t*>(notifyChange), [](uv_handle_t* handle) {
+		uv_async_t* async = reinterpret_cast<uv_async_t*>(handle);
+		delete async;
+	});
 }
 
 /**
@@ -129,14 +159,10 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 		}
 	}
 
-	if (beforeCount == 0 && afterCount > 0) {
-		LOG_DEBUG_THREAD_ID("Watchman::config", L"Starting background thread")
-		NAPI_THROW("Watchman::config", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
-	} else if (beforeCount > 0 && afterCount == 0) {
-		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling term event")
-		::SetEvent(term);
-	} else if (beforeCount != afterCount) {
-		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling refresh event")
+	// if we have any active listeners and the number of listeners changed,
+	// then signal the refresh
+	if (afterCount > 0 && beforeCount != afterCount) {
+		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling refresh event")
 		::SetEvent(refresh);
 	}
 
@@ -152,7 +178,7 @@ void Watchman::dispatch() {
 
 	while (1) {
 		std::shared_ptr<WatchNode> node;
-		DWORD count = 0;
+		DWORD remaining = 0;
 
 		// check if there are any changed nodes left...
 		// the first time we loop, we know there's at least one
@@ -160,15 +186,15 @@ void Watchman::dispatch() {
 			std::lock_guard<std::mutex> lock(changedNodesLock);
 
 			if (changedNodes.empty()) {
-				break;
+				return;
 			}
 
-			count = changedNodes.size();
+			remaining = changedNodes.size();
 			node = changedNodes.front();
 			changedNodes.pop_front();
 		}
 
-		LOG_DEBUG_2("Watchman::dispatch", L"Dispatching change event for \"%ls\" (%d pending)", node->name.c_str(), --count)
+		LOG_DEBUG_2("Watchman::dispatch", L"Dispatching change event for \"%ls\" (%d remaining)", node->name.c_str(), --remaining)
 		if (node->onChange()) {
 			printTree();
 		}
