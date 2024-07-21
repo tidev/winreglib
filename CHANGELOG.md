@@ -1,4 +1,4 @@
-# v3.0.0
+# v3.0.0 (July 20, 2024)
 
  * BREAKING CHANGE: Require Node.js 18.17 or newer.
  * fix: Fixed order of child key events when parent key is deleted.
