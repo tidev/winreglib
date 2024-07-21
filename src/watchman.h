@@ -27,6 +27,8 @@ public:
 
 	void config(const std::wstring& key, napi_value listener, WatchAction action);
 	void run();
+	void startWorker();
+	void stopWorker();
 
 private:
 	void dispatch();

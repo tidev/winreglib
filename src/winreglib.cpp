@@ -381,17 +381,17 @@ NAPI_METHOD(unwatch) {
 /**
  * Destroys the Watchman instance, log ref handle, and notify handle.
  */
-static void cleanup(napi_async_cleanup_hook_handle handle, void* arg) {
-	if (winreglib::watchman) {
+static void cleanup(napi_async_cleanup_hook_handle handle, void* env) {
+	if (winreglib::watchman != NULL) {
 		delete winreglib::watchman;
 	}
 
-	if (winreglib::logRef) {
-		napi_delete_reference((napi_env)arg, winreglib::logRef);
+	if (winreglib::logRef != NULL) {
+		napi_delete_reference((napi_env)env, winreglib::logRef);
 		winreglib::logRef = NULL;
 	}
 
-	if (winreglib::logNotify) {
+	if (winreglib::logNotify != NULL) {
 		uv_close((uv_handle_t*)winreglib::logNotify, [](uv_handle_t* handle) {
 			if (handle) {
 				delete handle;
@@ -415,7 +415,7 @@ NAPI_INIT() {
 	NAPI_THROW(
 		"init",
 		"ERR_NAPI_ADD_ASYNC_CLEANUP_HOOK",
-		napi_add_async_cleanup_hook(env, cleanup, NULL, NULL)
+		napi_add_async_cleanup_hook(env, cleanup, env, NULL)
 	)
 
 	winreglib::watchman = new winreglib::Watchman(env);

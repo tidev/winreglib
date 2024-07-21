@@ -17,13 +17,14 @@ static void complete(napi_env env, napi_status status, void* data) {
 	} else {
 		LOG_DEBUG_1("Watchman::complete", L"Worker thread exited (status=%d)", status)
 	}
+	((Watchman*)data)->stopWorker();
 }
 
 /**
  * Creates the default signal events, initializes the subkeys in the watcher tree, initializes the
  * background thread, and wires up the notification callback when a registry change occurs.
  */
-Watchman::Watchman(napi_env env) : env(env) {
+Watchman::Watchman(napi_env env) : env(env), asyncWork(NULL) {
 	// create the built-in events for controlling the background thread
 	term = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 	refresh = ::CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -33,26 +34,6 @@ Watchman::Watchman(napi_env env) : env(env) {
 	for (auto const& it : rootKeys) {
 		root->addSubkey(it.first, it.second);
 	}
-
-	// initialize the background thread that waits for win32 events
-	LOG_DEBUG_THREAD_ID("Watchman", L"Initializing async work")
-	napi_value name;
-	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(
-		env,
-		"winreglib.runloop",
-		NAPI_AUTO_LENGTH,
-		&name
-	))
-	NAPI_THROW("Watchman", "ERR_NAPI_CREATE_ASYNC_WORK", ::napi_create_async_work(
-		env,
-		NULL,
-		name,
-		execute,
-		complete,
-		this,
-		&asyncWork
-	))
-	NAPI_THROW("Watchman", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
 
 	// wire up our dispatch change handler into Node's event loop, then unref it so that we don't
 	// block Node from exiting
@@ -74,8 +55,7 @@ Watchman::Watchman(napi_env env) : env(env) {
  * Stops the background thread and closes all handles.
  */
 Watchman::~Watchman() {
-	::SetEvent(term);
-	::napi_delete_async_work(env, asyncWork);
+	stopWorker();
 	::CloseHandle(term);
 	::CloseHandle(refresh);
 
@@ -163,6 +143,15 @@ void Watchman::config(const std::wstring& key, napi_value listener, WatchAction 
 	// then signal the refresh
 	if (afterCount > 0 && beforeCount != afterCount) {
 		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signaling refresh event")
+		::SetEvent(refresh);
+	}
+
+	if (beforeCount == 0 && afterCount > 0) {
+		startWorker();
+	} else if (beforeCount > 0 && afterCount == 0) {
+		stopWorker();
+	} else if (beforeCount != afterCount) {
+		LOG_DEBUG_THREAD_ID("Watchman::config", L"Signalling refresh event")
 		::SetEvent(refresh);
 	}
 
@@ -302,4 +291,49 @@ void Watchman::run() {
 	}
 
 	delete[] handles;
+}
+
+/**
+ * Start the background thread that waits for win32 events.
+ * This function is called when adding the first watch listener.
+ */
+void Watchman::startWorker() {
+	if (asyncWork != NULL) {
+		LOG_DEBUG_THREAD_ID("Watchman::startWorker", L"Async work already exists!")
+	} else {
+		// initialize the background thread that waits for win32 events
+		LOG_DEBUG_THREAD_ID("Watchman::startWorker", L"Initializing async work")
+		napi_value name;
+		NAPI_THROW("Watchman::startWorker", "ERR_NAPI_CREATE_STRING", ::napi_create_string_utf8(
+			env,
+			"winreglib.runloop",
+			NAPI_AUTO_LENGTH,
+			&name
+		))
+
+		NAPI_THROW("Watchman::startWorker", "ERR_NAPI_CREATE_ASYNC_WORK", ::napi_create_async_work(
+			env,
+			NULL,
+			name,
+			execute,
+			complete,
+			this,
+			&asyncWork
+		))
+
+		LOG_DEBUG_THREAD_ID("Watchman::startWorker", L"Starting background thread")
+		NAPI_THROW("Watchman::startWorker", "ERR_NAPI_QUEUE_ASYNC_WORK", ::napi_queue_async_work(env, asyncWork))
+	}
+}
+
+/**
+ * Stops the background thread.
+ * This function is called when removing the last watch listener.
+ */
+void Watchman::stopWorker() {
+	if (asyncWork != NULL) {
+		LOG_DEBUG_THREAD_ID("Watchman::stopWorker", L"Deleting async work")
+		::napi_delete_async_work(env, asyncWork);
+		asyncWork = NULL;
+	}
 }

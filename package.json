@@ -1,6 +1,6 @@
 {
   "name": "winreglib",
-  "version": "3.0.0-rc.0",
+  "version": "3.0.0-rc.1",
   "description": "Windows Registry utility library",
   "type": "module",
   "exports": "./dist/index.js",
@@ -16,10 +16,8 @@
     "microsoft"
   ],
   "scripts": {
-    "build": "pnpm build:bundle && pnpm build:local",
+    "build": "pnpm build:bundle && pnpm rebuild",
     "build:bundle": "rimraf dist && rollup -c rollup.config.ts --configPlugin typescript && pnpm build:types",
-    "build:local": "node-gyp -j 20 build",
-    "build:local-debug": "node-gyp -j 20 build --debug",
     "build:types": "pnpm build:types:temp && pnpm build:types:roll && pnpm build:types:check",
     "build:types:temp": "tsc --declaration --emitDeclarationOnly --outDir temp --project tsconfig.build.json",
     "build:types:roll": "rollup --config rollup.dts.config.ts --configPlugin typescript && rimraf temp",
@@ -27,15 +25,15 @@
     "check": "biome check --write .",
     "clean": "node-gyp clean",
     "coverage": "vitest --pool=forks --coverage",
-    "install": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && node-gyp-build",
+    "install": "node scripts/build.js",
     "prepublishOnly": "pnpm build:bundle && pnpm prebuild",
     "prebuild": "pnpm pnpm prebuild-ia32 && pnpm prebuild-x64",
     "prebuild-arm": "prebuildify --napi --strip --platform=win32 --arch arm",
     "prebuild-arm64": "prebuildify --napi --strip --platform=win32 --arch arm64",
     "prebuild-ia32": "prebuildify --napi --strip --platform=win32 --arch ia32",
     "prebuild-x64": "prebuildify --napi --strip --platform=win32 --arch x64",
-    "rebuild:local": "node-gyp rebuild",
-    "rebuild:local-debug": "node-gyp rebuild --debug",
+    "rebuild": "node-gyp rebuild",
+    "rebuild:debug": "node-gyp rebuild --debug",
     "test": "vitest --allowOnly --pool=forks",
     "type-check": "tsc --noEmit"
   },
@@ -51,32 +49,21 @@
     "@types/node": "20.14.11",
     "@vitest/coverage-v8": "2.0.3",
     "esbuild": "0.23.0",
-    "lefthook": "1.7.3",
+    "lefthook": "1.7.4",
     "prebuildify": "6.0.1",
     "rimraf": "6.0.1",
-    "rollup": "4.18.1",
+    "rollup": "4.19.0",
     "rollup-plugin-dts": "6.1.1",
     "rollup-plugin-esbuild": "6.1.1",
     "tslib": "2.6.3",
     "typescript": "5.5.3",
     "vitest": "2.0.3"
   },
-  "files": [
-    "dist",
-    "patches",
-    "prebuilds",
-    "src/*.{cpp,h}",
-    "binding.gyp"
-  ],
+  "files": ["dist", "prebuilds", "src/*.{cpp,h}", "binding.gyp"],
   "homepage": "https://github.com/tidev/winreglib",
   "bugs": "https://github.com/tidev/winreglib/issues",
   "repository": "https://github.com/tidev/winreglib",
   "engines": {
     "node": ">=18.17"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "node-gyp-build@4.8.1": "patches/node-gyp-build@4.8.1.patch"
-    }
   }
 }
