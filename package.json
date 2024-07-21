@@ -1,6 +1,6 @@
 {
   "name": "winreglib",
-  "version": "3.0.0-rc.2",
+  "version": "3.0.0",
   "description": "Windows Registry utility library",
   "type": "module",
   "exports": "./dist/index.js",
@@ -59,7 +59,13 @@
     "typescript": "5.5.3",
     "vitest": "2.0.3"
   },
-  "files": ["dist", "prebuilds", "scripts/build.js", "src/*.{cpp,h}", "binding.gyp"],
+  "files": [
+    "dist",
+    "prebuilds",
+    "scripts/build.js",
+    "src/*.{cpp,h}",
+    "binding.gyp"
+  ],
   "homepage": "https://github.com/tidev/winreglib",
   "bugs": "https://github.com/tidev/winreglib/issues",
   "repository": "https://github.com/tidev/winreglib",
