@@ -4,10 +4,6 @@
  * fix: Fixed order of child key events when parent key is deleted.
  * fix: Fixed seg fault during cleanup that occurs when using winreglib in a
    worker.
- * fix: Fixed bug where the Windows Registry worker thread was being spawned
-   when adding the first listener. The idea was don't spawn the thread until
-   there was a listener, however thread shutdown is async and not worth the
-   hassle in a destructor, so now the background thread is always running.
 
 # v2.0.4 (July 2, 2024)
 
