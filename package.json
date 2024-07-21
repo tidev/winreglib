@@ -16,7 +16,7 @@
     "microsoft"
   ],
   "scripts": {
-    "build": "pnpm build:bundle && pnpm build:local",
+    "build": "pnpm build:bundle && pnpm rebuild",
     "build:bundle": "rimraf dist && rollup -c rollup.config.ts --configPlugin typescript && pnpm build:types",
     "build:types": "pnpm build:types:temp && pnpm build:types:roll && pnpm build:types:check",
     "build:types:temp": "tsc --declaration --emitDeclarationOnly --outDir temp --project tsconfig.build.json",
