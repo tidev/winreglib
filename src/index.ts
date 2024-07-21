@@ -35,12 +35,10 @@ export type RegistryKey = {
 };
 
 /**
- * The `winreglib` API and debug log emitter.
- *
- * @type {EventEmitter}
- * @emits {log} Emits a debug log message.
+ * Loads the `winreglib` native module and provides an API for interacting
+ * with the Windows registry.
  */
-class WinRegLib extends EventEmitter {
+export class WinRegLib extends EventEmitter {
 	nss: Record<string, Logger> = {};
 
 	constructor() {
@@ -108,4 +106,10 @@ class WinRegLib extends EventEmitter {
 	}
 }
 
+/**
+ * The `winreglib` API and debug log emitter.
+ *
+ * @type {EventEmitter}
+ * @emits {log} Emits a debug log message.
+ */
 export default new WinRegLib();
