@@ -19,17 +19,23 @@ describe('watch()', () => {
 	});
 
 	it('should error if key does not contain a subkey', () => {
+		const err: Error & { code?: string } = new Error(
+			'Expected key to contain both a root and subkey'
+		);
+		err.code = 'ERR_NO_SUBKEY';
 		expect(() => {
 			winreglib.watch('HKLM');
-		}).toThrowError(
-			new TypeError('Expected key to contain both a root and subkey')
-		);
+		}).toThrowError(err);
 	});
 
 	it('should error if root key is not valid', () => {
+		const err: Error & { code?: string } = new Error(
+			'Invalid registry root key "foo"'
+		);
+		err.code = 'ERR_WINREG_INVALID_ROOT';
 		expect(() => {
 			winreglib.watch('foo\\bar');
-		}).toThrowError(new TypeError('Invalid registry root key "foo"'));
+		}).toThrowError(err);
 	});
 
 	it(
