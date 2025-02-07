@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import nodeGypBuild from 'node-gyp-build';
+import nodeGypBuild from 'node-gyp-build/node-gyp-build.js';
 import snooplogg, { type Logger } from 'snooplogg';
 
 const cwd = dirname(dirname(fileURLToPath(import.meta.url)));
