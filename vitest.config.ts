@@ -9,6 +9,11 @@ export default defineConfig({
 		environment: 'node',
 		globals: false,
 		include: ['test/**/*.test.ts'],
+		poolOptions: {
+ 			forks: {
+ 				singleFork: true
+ 			}
+ 		},
 		watch: false
 	}
 });
