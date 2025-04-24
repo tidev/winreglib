@@ -34,7 +34,7 @@
     "prebuild-x64": "prebuildify --napi --strip --platform=win32 --arch x64",
     "rebuild": "node-gyp rebuild",
     "rebuild:debug": "node-gyp rebuild --debug",
-    "test": "vitest --allowOnly --pool=forks",
+    "test": "vitest --allowOnly --pool=forks --reporter=verbose",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
