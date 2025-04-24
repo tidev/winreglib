@@ -7,6 +7,13 @@ export default defineConfig({
 			reporter: ['html', 'lcov', 'text']
 		},
 		environment: 'node',
+		environmentOptions: {
+			node: {
+				env: {
+					SNOOPLOGG: '*'
+				}
+			}
+		},
 		globals: false,
 		include: ['test/**/*.test.ts'],
 		poolOptions: {
