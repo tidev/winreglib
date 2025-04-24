@@ -40,7 +40,6 @@ describe('watch()', () => {
 
 	it(
 		'should watch existing key for new subkey',
-		{ timeout: 15000 },
 		async () => {
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			reg('add', 'HKCU\\Software\\winreglib');
@@ -83,12 +82,12 @@ describe('watch()', () => {
 				handle.stop();
 				reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			}
-		}
+		},
+		15000
 	);
 
 	it(
 		'should watch existing key for value change',
-		{ timeout: 15000 },
 		async () => {
 			reg('delete', 'HKCU\\Software\\winreglib2', '/f');
 			reg('add', 'HKCU\\Software\\winreglib2');
@@ -147,10 +146,11 @@ describe('watch()', () => {
 				handle.stop();
 				reg('delete', 'HKCU\\Software\\winreglib2', '/f');
 			}
-		}
+		},
+		15000
 	);
 
-	it('should watch a key that does not exist', { timeout: 15000 }, async () => {
+	it('should watch a key that does not exist', async () => {
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib');
 
@@ -231,11 +231,10 @@ describe('watch()', () => {
 			handle.stop();
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		}
-	});
+	}, 15000);
 
 	it(
 		'should watch a key whose parent does not exist',
-		{ timeout: 15000 },
 		async () => {
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			reg('add', 'HKCU\\Software\\winreglib');
@@ -329,10 +328,11 @@ describe('watch()', () => {
 				handle.stop();
 				reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			}
-		}
+		},
+		15000
 	);
 
-	it('should watch a key that gets deleted', { timeout: 15000 }, async () => {
+	it('should watch a key that gets deleted', async () => {
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib\\foo');
 
@@ -369,11 +369,10 @@ describe('watch()', () => {
 			handle.stop();
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		}
-	});
+	}, 15000);
 
 	it(
 		'should watch a key whose parent gets deleted',
-		{ timeout: 15000 },
 		async () => {
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz');
@@ -413,10 +412,11 @@ describe('watch()', () => {
 				handle.stop();
 				reg('delete', 'HKCU\\Software\\winreglib', '/f');
 			}
-		}
+		},
+		15000
 	);
 
-	it('should survive the gauntlet', { timeout: 15000 }, async () => {
+	it('should survive the gauntlet', async () => {
 		reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		reg('add', 'HKCU\\Software\\winreglib');
 
@@ -594,5 +594,5 @@ describe('watch()', () => {
 			bazHandle.stop();
 			reg('delete', 'HKCU\\Software\\winreglib', '/f');
 		}
-	});
+	}, 15000);
 });
