@@ -1,6 +1,6 @@
 {
   "name": "winreglib",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Windows Registry utility library",
   "type": "module",
   "exports": "./dist/index.js",
