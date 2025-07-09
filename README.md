@@ -13,11 +13,11 @@ Windows Registry.
   - Get, list, and watch registry keys _without_ spawning `reg.exe`
   - Written in TypeScript
   - Packaged as an ESM module
-  - Supports x64 (64-bit) and ia32 (32-bit) CPU architectures
+  - Supports x64 (64-bit) CPU architectures (arm/arm64 untested)
 
 ## Requirements
 
-`winreglib` requires Node.js >=18.17.0 (Node-API 8) and ships with pre-built
+`winreglib` requires Node.js >=20.18.1 (Node-API 8) and ships with pre-built
 binaries for x64 and ia32 architectures. ARM-based architectures are not
 officially supported, but should technically work as long as you have the
 build tools installed.

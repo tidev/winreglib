@@ -1,6 +1,6 @@
 {
   "name": "winreglib",
-  "version": "3.0.1",
+  "version": "4.0.0",
   "description": "Windows Registry utility library",
   "type": "module",
   "exports": "./dist/index.js",
@@ -24,18 +24,17 @@
     "build:types:check": "tsc --project tsconfig.check.json",
     "check": "pnpm type-check && pnpm lint",
     "clean": "node-gyp clean",
-    "coverage": "vitest --pool=forks --coverage",
+    "coverage": "vitest --coverage",
     "install": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && node-gyp-build",
     "lint": "oxlint",
     "prepublishOnly": "pnpm build:bundle && pnpm prebuild",
-    "prebuild": "pnpm pnpm prebuild-ia32 && pnpm prebuild-x64",
+    "prebuild": "pnpm prebuild-x64",
     "prebuild-arm": "prebuildify --napi --strip --platform=win32 --arch arm",
     "prebuild-arm64": "prebuildify --napi --strip --platform=win32 --arch arm64",
-    "prebuild-ia32": "prebuildify --napi --strip --platform=win32 --arch ia32",
     "prebuild-x64": "prebuildify --napi --strip --platform=win32 --arch x64",
     "rebuild": "node-gyp rebuild",
     "rebuild:debug": "node-gyp rebuild --debug",
-    "test": "vitest --allowOnly --pool=forks --reporter=verbose",
+    "test": "vitest",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -73,6 +72,6 @@
   "bugs": "https://github.com/tidev/winreglib/issues",
   "repository": "https://github.com/tidev/winreglib",
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20.18.1"
   }
 }
