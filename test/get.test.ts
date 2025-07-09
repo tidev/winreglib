@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import winreglib from '../src/index.js';
-const { spawnSync } = require('node:child_process');
+import { spawnSync } from 'node:child_process';
 import snooplogg from 'snooplogg';
+import { randomBytes } from 'node:crypto';
 
 const { log } = snooplogg('test:winreglib');
 
@@ -11,17 +12,19 @@ const reg = (...args) => {
 	spawnSync('reg', args, { stdio: 'ignore' });
 };
 
+process.on('beforeExit', () => {
+	reg('delete', 'HKCU\\Software\\winreglib', '/f');
+});
+
 describe('get()', () => {
 	it('should error if key is not specified', () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input
 			winreglib.get(undefined as any, undefined as any);
 		}).toThrowError(new TypeError('Expected key to be a non-empty string'));
 	});
 
 	it('should error if value name is not specified', () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input
 			winreglib.get('HKLM\\software', undefined as any);
 		}).toThrowError(
 			new TypeError('Expected value name to be a non-empty string')
@@ -147,15 +150,15 @@ describe('get()', () => {
 	});
 
 	it('should get none value', { timeout: 15000 }, () => {
+		const key = `HKCU\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
 		try {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
-			reg('add', 'HKCU\\Software\\winreglib');
-			reg('add', 'HKCU\\Software\\winreglib', '/v', 'foo', '/t', 'REG_NONE');
+			reg('add', key);
+			reg('add', key, '/v', 'foo', '/t', 'REG_NONE');
 
-			const value = winreglib.get('HKCU\\Software\\winreglib', 'foo');
+			const value = winreglib.get(key, 'foo');
 			expect(value).toBeNull();
 		} finally {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+			reg('delete', key, '/f');
 		}
 	});
 });

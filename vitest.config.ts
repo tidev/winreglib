@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	test: {
+		allowOnly: true,
 		coverage: {
 			include: ['src/**/*.ts'],
 			reporter: ['html', 'lcov', 'text']
@@ -17,8 +18,8 @@ export default defineConfig({
 		globals: false,
 		include: ['test/**/*.test.ts'],
 		poolOptions: {
- 			forks: {
- 				singleFork: true
+ 			threads: {
+ 				//
  			}
  		},
 		watch: false

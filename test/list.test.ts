@@ -5,7 +5,6 @@ import winreglib from '../src/index.js';
 describe('list()', () => {
 	it('should error if key is not specified', () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input
 			winreglib.list(undefined as any);
 		}).toThrowError(new TypeError('Expected key to be a non-empty string'));
 	});

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import winreglib from '../src/index.js';
-const { spawnSync } = require('node:child_process');
+import { spawnSync } from 'node:child_process';
 import snooplogg from 'snooplogg';
+import { randomBytes } from 'node:crypto';
 
 const { log } = snooplogg('test:winreglib');
 
@@ -10,10 +11,13 @@ const reg = (...args) => {
 	spawnSync('reg', args, { stdio: 'ignore' });
 };
 
+process.on('beforeExit', () => {
+	reg('delete', 'HKCU\\Software\\winreglib', '/f');
+});
+
 describe('watch()', () => {
 	it('should error if key is not specified', () => {
 		expect(() => {
-			// biome-ignore lint/suspicious/noExplicitAny: need to test invalid input
 			winreglib.watch(undefined as any);
 		}).toThrowError(new TypeError('Expected key to be a non-empty string'));
 	});
@@ -41,10 +45,10 @@ describe('watch()', () => {
 	it(
 		'should watch existing key for new subkey',
 		async () => {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
-			reg('add', 'HKCU\\Software\\winreglib');
+			const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+			reg('add', key);
 
-			const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib');
+			const handle = winreglib.watch(key);
 
 			try {
 				let counter = 0;
@@ -57,14 +61,14 @@ describe('watch()', () => {
 								case 0:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+										key
 									});
-									reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f');
+									reg('delete', `${key}\\foo`, '/f');
 									break;
 								case 1:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+										key
 									});
 									resolve();
 									break;
@@ -73,14 +77,14 @@ describe('watch()', () => {
 							reject(e);
 						}
 					});
-					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
+					setTimeout(() => reg('add', `${key}\\foo`), 250);
 				});
 
 				handle.stop();
 			} finally {
 				// also test stop() being called twice
 				handle.stop();
-				reg('delete', 'HKCU\\Software\\winreglib', '/f');
+				reg('delete', key, '/f');
 			}
 		},
 		15000
@@ -89,10 +93,10 @@ describe('watch()', () => {
 	it(
 		'should watch existing key for value change',
 		async () => {
-			reg('delete', 'HKCU\\Software\\winreglib2', '/f');
-			reg('add', 'HKCU\\Software\\winreglib2');
+			const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+			reg('add', key);
 
-			const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib2');
+			const handle = winreglib.watch(key);
 
 			try {
 				let counter = 0;
@@ -105,11 +109,11 @@ describe('watch()', () => {
 								case 0:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib2'
+										key
 									});
 									reg(
 										'delete',
-										'HKCU\\Software\\winreglib2',
+										key,
 										'/f',
 										'/v',
 										'foo'
@@ -118,7 +122,7 @@ describe('watch()', () => {
 								case 1:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib2'
+										key
 									});
 									resolve();
 									break;
@@ -131,7 +135,7 @@ describe('watch()', () => {
 						() =>
 							reg(
 								'add',
-								'HKCU\\Software\\winreglib2',
+								key,
 								'/v',
 								'foo',
 								'/t',
@@ -144,17 +148,17 @@ describe('watch()', () => {
 				});
 			} finally {
 				handle.stop();
-				reg('delete', 'HKCU\\Software\\winreglib2', '/f');
+				reg('delete', key, '/f');
 			}
 		},
 		15000
 	);
 
 	it('should watch a key that does not exist', async () => {
-		reg('delete', 'HKCU\\Software\\winreglib', '/f');
-		reg('add', 'HKCU\\Software\\winreglib');
+		const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+		reg('add', key);
 
-		const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo');
+		const handle = winreglib.watch(`${key}\\foo`);
 
 		try {
 			let counter = 0;
@@ -167,11 +171,11 @@ describe('watch()', () => {
 							case 0:
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								reg(
 									'add',
-									'HKCU\\Software\\winreglib\\foo',
+									`${key}\\foo`,
 									'/v',
 									'bar',
 									'/t',
@@ -183,11 +187,11 @@ describe('watch()', () => {
 							case 1:
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								reg(
 									'delete',
-									'HKCU\\Software\\winreglib\\foo',
+									`${key}\\foo`,
 									'/f',
 									'/v',
 									'bar'
@@ -196,27 +200,27 @@ describe('watch()', () => {
 							case 2:
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								setTimeout(
-									() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
+									() => reg('delete', `${key}\\foo`, '/f'),
 									250
 								);
 								break;
 							case 3:
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								setTimeout(
-									() => reg('add', 'HKCU\\Software\\winreglib\\foo'),
+									() => reg('add', `${key}\\foo`),
 									250
 								);
 								break;
 							case 4:
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								resolve();
 								break;
@@ -225,22 +229,22 @@ describe('watch()', () => {
 						reject(e);
 					}
 				});
-				setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
+				setTimeout(() => reg('add', `${key}\\foo`), 250);
 			});
 		} finally {
 			handle.stop();
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+			reg('delete', key, '/f');
 		}
 	}, 15000);
 
 	it(
 		'should watch a key whose parent does not exist',
 		async () => {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
-			reg('add', 'HKCU\\Software\\winreglib');
+			const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+			reg('add', key);
 
 			const handle = winreglib.watch(
-				'HKCU\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+				`${key}\\foo\\bar\\baz`
 			);
 
 			try {
@@ -254,11 +258,11 @@ describe('watch()', () => {
 								case 0:
 									expect(evt).toMatchObject({
 										type: 'add',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+										key: `${key}\\foo\\bar\\baz`
 									});
 									reg(
 										'add',
-										'HKCU\\Software\\winreglib\\foo\\bar\\baz',
+										`${key}\\foo\\bar\\baz`,
 										'/v',
 										'val1',
 										'/t',
@@ -270,12 +274,12 @@ describe('watch()', () => {
 								case 1:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+										key: `${key}\\foo\\bar\\baz`
 									});
 									// this next line should not trigger anything
 									reg(
 										'add',
-										'HKCU\\Software\\winreglib\\foo',
+										`${key}\\foo`,
 										'/v',
 										'val2',
 										'/t',
@@ -286,7 +290,7 @@ describe('watch()', () => {
 									setTimeout(() => {
 										reg(
 											'add',
-											'HKCU\\Software\\winreglib\\foo\\bar\\baz',
+											`${key}\\foo\\bar\\baz`,
 											'/v',
 											'val3',
 											'/t',
@@ -299,16 +303,16 @@ describe('watch()', () => {
 								case 2:
 									expect(evt).toMatchObject({
 										type: 'change',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+										key: `${key}\\foo\\bar\\baz`
 									});
 									setTimeout(() => {
-										reg('delete', 'HKCU\\Software\\winreglib', '/f');
+										reg('delete', key, '/f');
 									}, 250);
 									break;
 								case 3:
 									expect(evt).toMatchObject({
 										type: 'delete',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+										key: `${key}\\foo\\bar\\baz`
 									});
 									resolve();
 									break;
@@ -318,25 +322,25 @@ describe('watch()', () => {
 						}
 					});
 
-					setTimeout(() => reg('add', 'HKCU\\Software\\winreglib\\foo'), 250);
+					setTimeout(() => reg('add', `${key}\\foo`), 250);
 					setTimeout(
-						() => reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz\\wiz'),
+						() => reg('add', `${key}\\foo\\bar\\baz\\wiz`),
 						250
 					);
 				});
 			} finally {
 				handle.stop();
-				reg('delete', 'HKCU\\Software\\winreglib', '/f');
+				reg('delete', key, '/f');
 			}
 		},
 		15000
 	);
 
 	it('should watch a key that gets deleted', async () => {
-		reg('delete', 'HKCU\\Software\\winreglib', '/f');
-		reg('add', 'HKCU\\Software\\winreglib\\foo');
+		const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+		reg('add', `${key}\\foo`);
 
-		const handle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo');
+		const handle = winreglib.watch(`${key}\\foo`);
 
 		try {
 			let counter = 0;
@@ -349,7 +353,7 @@ describe('watch()', () => {
 							case 0:
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								resolve();
 								break;
@@ -359,7 +363,7 @@ describe('watch()', () => {
 					}
 				});
 				setTimeout(
-					() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
+					() => reg('delete', `${key}\\foo`, '/f'),
 					250
 				);
 			});
@@ -367,18 +371,18 @@ describe('watch()', () => {
 		} finally {
 			// also test stop() being called twice
 			handle.stop();
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+			reg('delete', key, '/f');
 		}
 	}, 15000);
 
 	it(
 		'should watch a key whose parent gets deleted',
 		async () => {
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
-			reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz');
+			const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+			reg('add', `${key}\\foo\\bar\\baz`);
 
 			const handle = winreglib.watch(
-				'HKCU\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+				`${key}\\foo\\bar\\baz`
 			);
 
 			try {
@@ -392,7 +396,7 @@ describe('watch()', () => {
 								case 0:
 									expect(evt).toMatchObject({
 										type: 'delete',
-										key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+										key: `${key}\\foo\\bar\\baz`
 									});
 									resolve();
 									break;
@@ -402,7 +406,7 @@ describe('watch()', () => {
 						}
 					});
 					setTimeout(
-						() => reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f'),
+						() => reg('delete', `${key}\\foo`, '/f'),
 						250
 					);
 				});
@@ -410,21 +414,21 @@ describe('watch()', () => {
 			} finally {
 				// also test stop() being called twice
 				handle.stop();
-				reg('delete', 'HKCU\\Software\\winreglib', '/f');
+				reg('delete', key, '/f');
 			}
 		},
 		15000
 	);
 
 	it('should survive the gauntlet', async () => {
-		reg('delete', 'HKCU\\Software\\winreglib', '/f');
-		reg('add', 'HKCU\\Software\\winreglib');
+		const key = `HKEY_CURRENT_USER\\Software\\winreglib\\test-${randomBytes(4).toString('hex')}`;
+		reg('add', key);
 
-		const winreglibHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib');
-		const fooHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo');
-		const barHandle = winreglib.watch('HKCU\\SOFTWARE\\winreglib\\foo\\bar');
+		const winreglibHandle = winreglib.watch(key);
+		const fooHandle = winreglib.watch(`${key}\\foo`);
+		const barHandle = winreglib.watch(`${key}\\foo\\bar`);
 		const bazHandle = winreglib.watch(
-			'HKCU\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+			`${key}\\foo\\bar\\baz`
 		);
 
 		try {
@@ -439,40 +443,40 @@ describe('watch()', () => {
 								expect(handleName).toBe('winreglibHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+									key
 								});
 								break;
 							case 1:
 								expect(handleName).toBe('fooHandle');
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								break;
 							case 2:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+									key: `${key}\\foo\\bar`
 								});
-								reg('delete', 'HKCU\\Software\\winreglib\\foo\\bar', '/f');
+								reg('delete', `${key}\\foo\\bar`, '/f');
 								break;
 							case 3:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+									key: `${key}\\foo\\bar`
 								});
 								break;
 							case 4:
 								expect(handleName).toBe('fooHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								reg(
 									'add',
-									'HKCU\\Software\\winreglib',
+									key,
 									'/v',
 									'foo',
 									'/t',
@@ -485,41 +489,41 @@ describe('watch()', () => {
 								expect(handleName).toBe('winreglibHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+									key
 								});
-								reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\wiz');
+								reg('add', `${key}\\foo\\bar\\wiz`);
 								break;
 							case 6:
 								expect(handleName).toBe('fooHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								break;
 							case 7:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+									key: `${key}\\foo\\bar`
 								});
-								reg('add', 'HKCU\\Software\\winreglib\\foo\\bar\\baz');
+								reg('add', `${key}\\foo\\bar\\baz`);
 								break;
 							case 8:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+									key: `${key}\\foo\\bar`
 								});
 								break;
 							case 9:
 								expect(handleName).toBe('bazHandle');
 								expect(evt).toMatchObject({
 									type: 'add',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+									key: `${key}\\foo\\bar\\baz`
 								});
 								reg(
 									'add',
-									'HKCU\\Software\\winreglib\\foo\\bar\\baz',
+									`${key}\\foo\\bar\\baz`,
 									'/v',
 									'foo',
 									'/t',
@@ -532,44 +536,44 @@ describe('watch()', () => {
 								expect(handleName).toBe('bazHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+									key: `${key}\\foo\\bar\\baz`
 								});
-								reg('delete', 'HKCU\\Software\\winreglib', '/f', '/v', 'foo');
+								reg('delete', key, '/f', '/v', 'foo');
 								break;
 							case 11:
 								expect(handleName).toBe('winreglibHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+									key
 								});
-								reg('delete', 'HKCU\\Software\\winreglib\\foo', '/f');
+								reg('delete', `${key}\\foo`, '/f');
 								break;
 							case 12:
 								expect(handleName).toBe('bazHandle');
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar\\baz'
+									key: `${key}\\foo\\bar\\baz`
 								});
 								break;
 							case 13:
 								expect(handleName).toBe('barHandle');
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo\\bar'
+									key: `${key}\\foo\\bar`
 								});
 								break;
 							case 14:
 								expect(handleName).toBe('fooHandle');
 								expect(evt).toMatchObject({
 									type: 'delete',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib\\foo'
+									key: `${key}\\foo`
 								});
 								break;
 							case 15:
 								expect(handleName).toBe('winreglibHandle');
 								expect(evt).toMatchObject({
 									type: 'change',
-									key: 'HKEY_CURRENT_USER\\SOFTWARE\\winreglib'
+									key
 								});
 								resolve();
 								break;
@@ -583,7 +587,7 @@ describe('watch()', () => {
 				barHandle.on('change', evt => fn(evt, 'barHandle'));
 				bazHandle.on('change', evt => fn(evt, 'bazHandle'));
 				setTimeout(
-					() => reg('add', 'HKCU\\Software\\winreglib\\foo\\bar'),
+					() => reg('add', `${key}\\foo\\bar`),
 					250
 				);
 			});
@@ -592,7 +596,7 @@ describe('watch()', () => {
 			fooHandle.stop();
 			barHandle.stop();
 			bazHandle.stop();
-			reg('delete', 'HKCU\\Software\\winreglib', '/f');
+			reg('delete', key, '/f');
 		}
 	}, 15000);
 });
