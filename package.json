@@ -51,7 +51,7 @@
     "@vitest/coverage-v8": "3.2.4",
     "esbuild": "0.25.10",
     "lefthook": "1.13.6",
-    "oxlint": "1.19.0",
+    "oxlint": "1.20.0",
     "prebuildify": "6.0.1",
     "rimraf": "6.0.1",
     "rollup": "4.52.4",
