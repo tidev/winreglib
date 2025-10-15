@@ -41,10 +41,10 @@
     "napi-macros": "2.2.2",
     "node-gyp": "11.4.2",
     "node-gyp-build": "4.8.4",
-    "snooplogg": "6.0.1"
+    "snooplogg": "6.0.2"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "28.0.6",
+    "@rollup/plugin-commonjs": "28.0.7",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-typescript": "12.1.4",
     "@types/node": "24.7.2",
