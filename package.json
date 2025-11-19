@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "napi-macros": "2.2.2",
-    "node-gyp": "12.0.0",
+    "node-gyp": "12.1.0",
     "node-gyp-build": "4.8.4",
     "snooplogg": "6.1.1"
   },
