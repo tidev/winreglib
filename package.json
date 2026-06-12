@@ -49,7 +49,7 @@
     "@rollup/plugin-typescript": "12.3.0",
     "@types/node": "25.6.0",
     "@vitest/coverage-v8": "4.1.5",
-    "esbuild": "0.28.0",
+    "esbuild": "0.28.1",
     "lefthook": "2.1.6",
     "oxlint": "1.63.0",
     "prebuildify": "6.0.1",
